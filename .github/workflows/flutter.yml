@@ -31,6 +31,7 @@ jobs:
       - run: flutter --version
       - run: flutter config --enable-windows-desktop
       - run: flutter create --platforms=windows .
+      - run: powershell -ExecutionPolicy Bypass -File .\tool\patch_windows_cmake.ps1
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
