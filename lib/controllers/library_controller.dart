@@ -116,19 +116,26 @@ class LibraryController extends ChangeNotifier {
     });
   }
 
-  Future<void> createFolder(String name) async {
+  Future<void> createFolder(String name) => createFolderAt(currentPath, name);
+
+  Future<void> createFolderAt(String parent, String name) async {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
     await _guard(() async {
-      final ok = await _bridge.createFolder(currentPath, trimmed);
-      if (!ok) throw StateError('Could not create folder.');
+      final ok = await _bridge.createFolder(parent, trimmed);
+      if (!ok) throw StateError('Could not create folder. A folder with that name may already exist.');
+      notice = 'Folder created.';
       await _refreshCurrentInternal();
       await _refreshAllInternal();
     });
   }
 
-  Future<void> createNote(String title, String body) async {
+  Future<void> createNote(String title, String body) {
     final target = currentPath.isEmpty ? 'Notes' : currentPath;
+    return createNoteAt(target, title, body);
+  }
+
+  Future<void> createNoteAt(String target, String title, String body) async {
     await _guard(() async {
       final ok = await _bridge.createNote(target, title.trim(), body);
       if (!ok) throw StateError('Could not save note.');
@@ -189,6 +196,12 @@ class LibraryController extends ChangeNotifier {
 
   void setGridMode(bool value) {
     gridMode = value;
+    notifyListeners();
+  }
+
+  void clearStatus() {
+    notice = null;
+    error = null;
     notifyListeners();
   }
 

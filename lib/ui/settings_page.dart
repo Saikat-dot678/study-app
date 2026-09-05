@@ -10,16 +10,20 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 116),
       children: [
         Text(
-          'Storage',
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(fontWeight: FontWeight.w800),
+          'Settings',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
+        Text(
+          'Your library stays local, portable and under your control.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 24),
+        const _SectionLabel('Storage'),
+        const SizedBox(height: 10),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(18),
@@ -28,30 +32,41 @@ class SettingsPage extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      controller.connected
-                          ? Icons.folder_special_rounded
-                          : Icons.folder_off_outlined,
-                      color: Theme.of(context).colorScheme.primary,
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        controller.connected ? Icons.folder_special_rounded : Icons.folder_off_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        controller.connected
-                            ? controller.libraryName ?? 'Connected folder'
-                            : 'No library connected',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            controller.connected ? controller.libraryName ?? 'Connected folder' : 'No library connected',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            controller.connected ? 'Portable library folder' : 'Choose a folder to begin',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 13),
                 Text(
                   controller.connected
-                      ? 'This is the folder Study App reads and writes. Your files are not trapped inside an app database.'
+                      ? 'Study reads and writes directly inside this folder. Your materials are normal files, not trapped in a private database.'
                       : 'Choose an existing folder or create a new one with Android’s folder picker.',
                 ),
                 const SizedBox(height: 16),
@@ -77,20 +92,28 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Text(
-          'Move to a new phone',
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(fontWeight: FontWeight.w800),
+        const _SectionLabel('Built-in learning tools'),
+        const SizedBox(height: 10),
+        const _InfoCard(
+          icon: Icons.play_circle_outline_rounded,
+          title: 'Read and play without leaving Study',
+          body: 'PDFs, Markdown/text, images, audio and video open inside the app. Modern DOCX/PPTX/XLSX, OpenDocument and EPUB files get an offline readable view.',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
+        const _InfoCard(
+          icon: Icons.open_in_new_rounded,
+          title: 'External apps are still available',
+          body: 'Legacy or unusual formats remain accessible through “Open in another app”, so your library never becomes a format lock-in.',
+        ),
+        const SizedBox(height: 24),
+        const _SectionLabel('Move to a new phone'),
+        const SizedBox(height: 10),
         const _InfoCard(
           icon: Icons.phone_android_rounded,
           title: 'Copy once, reconnect once',
-          body: 'Copy the complete library folder to the new phone, install Study App, then choose that copied folder. Nested folders, notes and files appear again immediately.',
+          body: 'Copy the complete library folder to the new phone, install Study, then select that copied folder. The entire nested structure appears again.',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         const _InfoCard(
           icon: Icons.shield_outlined,
           title: 'Private by default',
@@ -119,22 +142,24 @@ class SettingsPage extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Forget folder connection?'),
-        content: const Text(
-          'Study App will lose access until you select a folder again. Your files will not be deleted.',
-        ),
+        content: const Text('Study will lose access until you select a folder again. Your files will not be deleted.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Forget'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Forget')),
         ],
       ),
     );
     if (ok == true) await controller.forgetLibrary();
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800));
   }
 }
 
@@ -149,18 +174,26 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(17),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 14),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(icon, size: 21, color: Theme.of(context).colorScheme.primary),
+            ),
+            const SizedBox(width: 13),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 5),
                   Text(body),
                 ],
               ),
