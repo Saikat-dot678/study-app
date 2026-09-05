@@ -57,7 +57,7 @@ class AppTheme {
       textTheme: base.textTheme.copyWith(
         headlineLarge: base.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -1.1),
         headlineMedium: base.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.8),
-        headlineSmall: base.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w850, letterSpacing: -0.5),
+        headlineSmall: base.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
         titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.25),
       ),
       appBarTheme: AppBarTheme(
