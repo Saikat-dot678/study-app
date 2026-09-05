@@ -52,17 +52,25 @@ class ConnectLibraryView extends StatelessWidget {
 }
 
 class FileIcon extends StatelessWidget {
-  const FileIcon({super.key, required this.entry, this.large = false});
+  const FileIcon({
+    super.key,
+    required this.entry,
+    this.large = false,
+    this.heroTag,
+  });
 
   final LibraryEntry entry;
   final bool large;
+  final String? heroTag;
 
   @override
   Widget build(BuildContext context) {
     final icon = switch (entry.kind) {
       LibraryKind.folder => Icons.folder_rounded,
       LibraryKind.pdf => Icons.picture_as_pdf_rounded,
+      LibraryKind.book => Icons.auto_stories_rounded,
       LibraryKind.slides => Icons.slideshow_rounded,
+      LibraryKind.spreadsheet => Icons.table_chart_rounded,
       LibraryKind.document => Icons.description_rounded,
       LibraryKind.note => Icons.edit_note_rounded,
       LibraryKind.audio => Icons.graphic_eq_rounded,
@@ -71,19 +79,24 @@ class FileIcon extends StatelessWidget {
       LibraryKind.archive => Icons.archive_rounded,
       LibraryKind.other => Icons.insert_drive_file_rounded,
     };
-    final size = large ? 48.0 : 44.0;
-    return Container(
+    final size = large ? 56.0 : 44.0;
+    final box = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(large ? 18 : 14),
       ),
       child: Icon(
         icon,
         color: Theme.of(context).colorScheme.onPrimaryContainer,
-        size: large ? 27 : 23,
+        size: large ? 31 : 23,
       ),
+    );
+    if (heroTag == null) return box;
+    return Hero(
+      tag: heroTag!,
+      child: Material(type: MaterialType.transparency, child: box),
     );
   }
 }
@@ -93,22 +106,31 @@ class FileRow extends StatelessWidget {
     super.key,
     required this.entry,
     required this.onTap,
+    this.onLongPress,
     this.showPath = false,
     this.trailing,
+    this.selected = false,
   });
 
   final LibraryEntry entry;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final bool showPath;
   final Widget? trailing;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: selected ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.55) : null,
       child: ListTile(
         onTap: onTap,
+        onLongPress: onLongPress,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-        leading: FileIcon(entry: entry),
+        leading: FileIcon(
+          entry: entry,
+          heroTag: entry.isDirectory ? null : 'entry:${entry.path}',
+        ),
         title: Text(
           entry.name,
           maxLines: 1,

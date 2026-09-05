@@ -1,7 +1,9 @@
 enum LibraryKind {
   folder,
   pdf,
+  book,
   slides,
+  spreadsheet,
   document,
   note,
   audio,
@@ -51,8 +53,14 @@ class LibraryEntry {
   LibraryKind get kind {
     if (isDirectory) return LibraryKind.folder;
     if (extension == 'pdf') return LibraryKind.pdf;
+    if ({'epub', 'mobi', 'azw', 'azw3'}.contains(extension)) {
+      return LibraryKind.book;
+    }
     if ({'ppt', 'pptx', 'odp', 'key'}.contains(extension)) {
       return LibraryKind.slides;
+    }
+    if ({'xls', 'xlsx', 'ods', 'csv', 'tsv'}.contains(extension)) {
+      return LibraryKind.spreadsheet;
     }
     if ({'md', 'txt', 'markdown'}.contains(extension)) return LibraryKind.note;
     if ({'doc', 'docx', 'odt', 'rtf'}.contains(extension)) {
@@ -62,15 +70,38 @@ class LibraryEntry {
         .contains(extension)) {
       return LibraryKind.audio;
     }
-    if ({'mp4', 'mkv', 'mov', 'webm', 'avi'}.contains(extension)) {
+    if ({'mp4', 'mkv', 'mov', 'webm', 'avi', 'm4v'}.contains(extension)) {
       return LibraryKind.video;
     }
-    if ({'jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'}.contains(extension)) {
+    if ({'jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'bmp'}
+        .contains(extension)) {
       return LibraryKind.image;
     }
     if ({'zip', 'rar', '7z', 'tar', 'gz'}.contains(extension)) {
       return LibraryKind.archive;
     }
     return LibraryKind.other;
+  }
+
+  bool get canPreviewInApp {
+    if (isDirectory) return false;
+    if ({
+      LibraryKind.pdf,
+      LibraryKind.note,
+      LibraryKind.audio,
+      LibraryKind.video,
+      LibraryKind.image,
+    }.contains(kind)) {
+      return true;
+    }
+    if (kind == LibraryKind.book) return extension == 'epub';
+    if (kind == LibraryKind.slides) return {'pptx', 'odp'}.contains(extension);
+    if (kind == LibraryKind.document) {
+      return {'docx', 'odt', 'rtf'}.contains(extension);
+    }
+    if (kind == LibraryKind.spreadsheet) {
+      return {'xlsx', 'ods', 'csv', 'tsv'}.contains(extension);
+    }
+    return false;
   }
 }

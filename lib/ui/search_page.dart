@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/library_controller.dart';
 import '../models/library_entry.dart';
+import '../viewers/viewer_page.dart';
 import 'library_widgets.dart';
 
 class SearchPage extends StatefulWidget {
@@ -19,8 +20,15 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  final TextEditingController input = TextEditingController();
   String query = '';
   LibraryKind? kind;
+
+  @override
+  void dispose() {
+    input.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,62 +42,104 @@ class _SearchPageState extends State<SearchPage> {
           entry.name.toLowerCase().contains(normalized) ||
           entry.path.toLowerCase().contains(normalized);
       return textMatch && (kind == null || entry.kind == kind);
-    }).toList();
+    }).toList()
+      ..sort((a, b) {
+        if (a.isDirectory != b.isDirectory) return a.isDirectory ? -1 : 1;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 116),
       children: [
+        Text(
+          'Find anything',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.6),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Search names and folder paths across your complete offline library.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 18),
         TextField(
+          controller: input,
+          autofocus: false,
           onChanged: (value) => setState(() => query = value),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search_rounded),
-            hintText: 'Search files, folders, notes…',
+          decoration: InputDecoration(
+            prefixIcon: const Icon(Icons.search_rounded),
+            hintText: 'Try “DBMS”, “lecture”, “semester 5”…',
+            suffixIcon: query.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: () {
+                      input.clear();
+                      setState(() => query = '');
+                    },
+                    icon: const Icon(Icons.close_rounded),
+                  ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 13),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _Filter(label: 'All', selected: kind == null, onTap: () => setState(() => kind = null)),
-              _Filter(label: 'PDF', selected: kind == LibraryKind.pdf, onTap: () => setState(() => kind = LibraryKind.pdf)),
-              _Filter(label: 'Slides', selected: kind == LibraryKind.slides, onTap: () => setState(() => kind = LibraryKind.slides)),
-              _Filter(label: 'Audio', selected: kind == LibraryKind.audio, onTap: () => setState(() => kind = LibraryKind.audio)),
-              _Filter(label: 'Notes', selected: kind == LibraryKind.note, onTap: () => setState(() => kind = LibraryKind.note)),
+              _Filter(label: 'All', icon: Icons.all_inclusive_rounded, selected: kind == null, onTap: () => setState(() => kind = null)),
+              _Filter(label: 'PDF', icon: Icons.picture_as_pdf_rounded, selected: kind == LibraryKind.pdf, onTap: () => setState(() => kind = LibraryKind.pdf)),
+              _Filter(label: 'Books', icon: Icons.auto_stories_rounded, selected: kind == LibraryKind.book, onTap: () => setState(() => kind = LibraryKind.book)),
+              _Filter(label: 'Slides', icon: Icons.slideshow_rounded, selected: kind == LibraryKind.slides, onTap: () => setState(() => kind = LibraryKind.slides)),
+              _Filter(label: 'Video', icon: Icons.movie_rounded, selected: kind == LibraryKind.video, onTap: () => setState(() => kind = LibraryKind.video)),
+              _Filter(label: 'Audio', icon: Icons.graphic_eq_rounded, selected: kind == LibraryKind.audio, onTap: () => setState(() => kind = LibraryKind.audio)),
+              _Filter(label: 'Notes', icon: Icons.edit_note_rounded, selected: kind == LibraryKind.note, onTap: () => setState(() => kind = LibraryKind.note)),
+              _Filter(label: 'Docs', icon: Icons.description_rounded, selected: kind == LibraryKind.document, onTap: () => setState(() => kind = LibraryKind.document)),
             ],
           ),
         ),
-        const SizedBox(height: 18),
-        Text(
-          '${results.length} result${results.length == 1 ? '' : 's'}',
-          style: Theme.of(context).textTheme.labelLarge,
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Text('${results.length} result${results.length == 1 ? '' : 's'}', style: Theme.of(context).textTheme.labelLarge),
+            const Spacer(),
+            if (query.isEmpty) Text('Type to narrow down', style: Theme.of(context).textTheme.labelSmall),
+          ],
         ),
         const SizedBox(height: 10),
-        ...results.map(
-          (entry) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: FileRow(
-              entry: entry,
-              showPath: true,
-              onTap: () {
-                if (entry.isDirectory) {
-                  widget.openLibrary(entry.path);
-                } else {
-                  widget.controller.openEntry(entry);
-                }
-              },
+        if (results.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 50),
+            child: EmptyCard(
+              icon: Icons.search_off_rounded,
+              title: 'Nothing matched',
+              subtitle: 'Try a shorter keyword or switch the material filter.',
+            ),
+          )
+        else
+          ...results.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: FileRow(
+                entry: entry,
+                showPath: true,
+                onTap: () {
+                  if (entry.isDirectory) {
+                    widget.openLibrary(entry.path);
+                  } else {
+                    openStudyViewer(context, widget.controller, entry);
+                  }
+                },
+              ),
             ),
           ),
-        ),
       ],
     );
   }
 }
 
 class _Filter extends StatelessWidget {
-  const _Filter({required this.label, required this.selected, required this.onTap});
+  const _Filter({required this.label, required this.icon, required this.selected, required this.onTap});
 
   final String label;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
 
@@ -97,7 +147,8 @@ class _Filter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
+      child: FilterChip(
+        avatar: Icon(icon, size: 16),
         label: Text(label),
         selected: selected,
         onSelected: (_) => onTap(),

@@ -1,6 +1,7 @@
 package com.saikat.studyapp
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -49,8 +50,14 @@ class MainActivity : FlutterActivity() {
                         "renameEntry" -> result.success(renameEntry(call.argument<String>("path") ?: "", call.argument<String>("name") ?: ""))
                         "moveEntry" -> result.success(moveEntry(call.argument<String>("source") ?: "", call.argument<String>("destination") ?: ""))
                         "deleteEntry" -> result.success(resolve(call.argument<String>("path") ?: "")?.delete() ?: false)
+                        "entryUri" -> result.success(entryUri(call.argument<String>("path") ?: ""))
+                        "prepareEntry" -> result.success(prepareEntry(call.argument<String>("path") ?: ""))
                         "openEntry" -> {
                             openEntry(call.argument<String>("path") ?: "")
+                            result.success(null)
+                        }
+                        "shareEntry" -> {
+                            shareEntry(call.argument<String>("path") ?: "")
                             result.success(null)
                         }
                         else -> result.notImplemented()
@@ -171,7 +178,7 @@ class MainActivity : FlutterActivity() {
 
     private fun prepareRoot() {
         val root = root() ?: return
-        listOf("Inbox", "Notes", "Books", "Slides", "Recordings").forEach { name ->
+        listOf("Inbox", "Notes", "Books", "Slides", "Recordings", "Videos").forEach { name ->
             if (root.findFile(name) == null) root.createDirectory(name)
         }
         val appDir = root.findFile(".studyapp") ?: root.createDirectory(".studyapp")
@@ -291,6 +298,41 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun entryUri(path: String): String {
+        val file = resolve(path) ?: throw IllegalArgumentException("File is unavailable")
+        if (file.isDirectory) throw IllegalArgumentException("Folders do not have a playable URI")
+        return file.uri.toString()
+    }
+
+    private fun prepareEntry(path: String): String {
+        val file = resolve(path) ?: throw IllegalArgumentException("File is unavailable")
+        if (file.isDirectory) throw IllegalArgumentException("Folders cannot be previewed")
+
+        val previewDir = File(cacheDir, "study_previews").apply { mkdirs() }
+        val staleBefore = System.currentTimeMillis() - 7L * 24L * 60L * 60L * 1000L
+        previewDir.listFiles()?.filter { it.lastModified() < staleBefore }?.forEach { it.delete() }
+
+        val cleanName = sanitizeName(file.name ?: "preview").ifBlank { "preview" }
+        val cacheFile = File(previewDir, "${path.hashCode()}_$cleanName")
+        val sourceModified = file.lastModified()
+        val cacheIsFresh = cacheFile.exists() &&
+            cacheFile.length() == file.length() &&
+            (sourceModified <= 0L || cacheFile.lastModified() >= sourceModified)
+
+        if (!cacheIsFresh) {
+            try {
+                contentResolver.openInputStream(file.uri)?.use { input ->
+                    FileOutputStream(cacheFile, false).use { output -> input.copyTo(output) }
+                } ?: throw IllegalStateException("Could not read the selected file")
+                if (sourceModified > 0L) cacheFile.setLastModified(sourceModified)
+            } catch (error: Exception) {
+                cacheFile.delete()
+                throw error
+            }
+        }
+        return cacheFile.absolutePath
+    }
+
     private fun openEntry(path: String) {
         val file = resolve(path) ?: throw IllegalArgumentException("File is unavailable")
         if (file.isDirectory) return
@@ -303,6 +345,18 @@ class MainActivity : FlutterActivity() {
         } catch (_: Exception) {
             throw IllegalStateException("No app on this phone can open this file type")
         }
+    }
+
+    private fun shareEntry(path: String) {
+        val file = resolve(path) ?: throw IllegalArgumentException("File is unavailable")
+        if (file.isDirectory) throw IllegalArgumentException("Share individual files, not folders")
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = file.type ?: "*/*"
+            putExtra(Intent.EXTRA_STREAM, file.uri)
+            clipData = ClipData.newUri(contentResolver, file.name ?: "Study material", file.uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        startActivity(Intent.createChooser(intent, "Share study material"))
     }
 
     private fun copyUriInto(sourceUri: Uri, destination: DocumentFile): String? {
@@ -388,7 +442,9 @@ class MainActivity : FlutterActivity() {
         return try {
             val displayName = sanitizeName(queryDisplayName(uri) ?: "Shared file").ifBlank { "Shared file" }
             val pending = File(pendingShareDir(), "${System.currentTimeMillis()}_$displayName")
-            contentResolver.openInputStream(uri)?.use { input -> FileOutputStream(pending).use { output -> input.copyTo(output) } } ?: return null
+            contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(pending).use { output -> input.copyTo(output) }
+            } ?: return null
             displayName
         } catch (_: Exception) {
             null
@@ -407,7 +463,9 @@ class MainActivity : FlutterActivity() {
             val target = inbox.createFile(guessMime(name), name)
             if (target != null) {
                 try {
-                    FileInputStream(file).use { input -> contentResolver.openOutputStream(target.uri, "w")?.use { output -> input.copyTo(output) } }
+                    FileInputStream(file).use { input ->
+                        contentResolver.openOutputStream(target.uri, "w")?.use { output -> input.copyTo(output) }
+                    }
                     file.delete()
                     names.add(target.name ?: name)
                 } catch (_: Exception) {
@@ -422,9 +480,16 @@ class MainActivity : FlutterActivity() {
         runOnUiThread { channel?.invokeMethod("shareReceived", names) }
     }
 
-    private fun sanitizeName(value: String): String = value.replace('/', '_').replace('\\', '_').replace(Regex("[\\u0000-\\u001F]"), "").trim()
+    private fun sanitizeName(value: String): String = value
+        .replace('/', '_')
+        .replace('\\', '_')
+        .replace(Regex("[\\u0000-\\u001F]"), "")
+        .trim()
 
-    private fun splitPath(path: String): List<String> = path.split('/').map { it.trim() }.filter { it.isNotEmpty() && it != "." && it != ".." }
+    private fun splitPath(path: String): List<String> = path
+        .split('/')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && it != "." && it != ".." }
 
     private fun joinPath(parent: String, child: String): String = if (parent.isBlank()) child else "$parent/$child"
 
@@ -432,17 +497,27 @@ class MainActivity : FlutterActivity() {
         val extension = name.substringAfterLast('.', "").lowercase(Locale.getDefault())
         return when (extension) {
             "pdf" -> "application/pdf"
+            "epub" -> "application/epub+zip"
             "ppt" -> "application/vnd.ms-powerpoint"
             "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            "odp" -> "application/vnd.oasis.opendocument.presentation"
             "doc" -> "application/msword"
             "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "odt" -> "application/vnd.oasis.opendocument.text"
+            "xls" -> "application/vnd.ms-excel"
+            "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "ods" -> "application/vnd.oasis.opendocument.spreadsheet"
+            "csv" -> "text/csv"
             "txt", "md" -> "text/plain"
             "jpg", "jpeg" -> "image/jpeg"
             "png" -> "image/png"
+            "webp" -> "image/webp"
             "mp3" -> "audio/mpeg"
             "m4a" -> "audio/mp4"
             "wav" -> "audio/wav"
-            "mp4" -> "video/mp4"
+            "mp4", "m4v" -> "video/mp4"
+            "webm" -> "video/webm"
+            "mkv" -> "video/x-matroska"
             "zip" -> "application/zip"
             else -> "application/octet-stream"
         }

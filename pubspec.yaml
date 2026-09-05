@@ -1,15 +1,26 @@
 name: study_app
-description: Offline-first student library for notes, books, slides, recordings and shared files.
+description: Offline-first student library for notes, books, slides, recordings, videos and shared files.
 publish_to: "none"
-version: 0.1.0+1
+version: 0.3.0+3
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: ">=3.13.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  pdfrx: ^2.6.1
+  just_audio: ^0.10.6
+  just_audio_windows: ^0.2.3
+  video_player: ^2.14.0
+  video_player_win: ^3.2.2
+  archive: ^4.2.0
+  xml: ^7.0.1
+  flutter_markdown_plus: ^1.0.12
+  file_picker: ^12.2.0
+  shared_preferences: ^2.5.5
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
