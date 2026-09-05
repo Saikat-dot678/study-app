@@ -132,7 +132,27 @@ class StorageBridge {
     return await _channel.invokeMethod<bool>('deleteEntry', {'path': path}) ?? false;
   }
 
+  Future<String> prepareEntry(String path) async {
+    final value = await _channel.invokeMethod<String>('prepareEntry', {'path': path});
+    if (value == null || value.isEmpty) {
+      throw StateError('Could not prepare this file for viewing.');
+    }
+    return value;
+  }
+
+  Future<String> entryUri(String path) async {
+    final value = await _channel.invokeMethod<String>('entryUri', {'path': path});
+    if (value == null || value.isEmpty) {
+      throw StateError('Could not access this file.');
+    }
+    return value;
+  }
+
   Future<void> open(String path) async {
     await _channel.invokeMethod<void>('openEntry', {'path': path});
+  }
+
+  Future<void> share(String path) async {
+    await _channel.invokeMethod<void>('shareEntry', {'path': path});
   }
 }

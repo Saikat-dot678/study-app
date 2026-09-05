@@ -85,7 +85,24 @@ class LibraryController extends ChangeNotifier {
     if (entry.isDirectory) {
       await openFolder(entry.path);
     } else {
-      await _guard(() => _bridge.open(entry.path));
+      await openExternally(entry);
+    }
+  }
+
+  Future<String> prepareForViewer(LibraryEntry entry) => _bridge.prepareEntry(entry.path);
+
+  Future<String> contentUri(LibraryEntry entry) => _bridge.entryUri(entry.path);
+
+  Future<void> openExternally(LibraryEntry entry) async {
+    await _guard(() => _bridge.open(entry.path));
+  }
+
+  Future<void> shareEntry(LibraryEntry entry) async {
+    try {
+      await _bridge.share(entry.path);
+    } catch (e) {
+      error = e.toString().replaceFirst('Bad state: ', '');
+      notifyListeners();
     }
   }
 
@@ -131,19 +148,40 @@ class LibraryController extends ChangeNotifier {
   }
 
   Future<void> moveEntry(LibraryEntry entry, String destination) async {
+    await moveEntries([entry], destination);
+  }
+
+  Future<void> moveEntries(List<LibraryEntry> values, String destination) async {
+    if (values.isEmpty) return;
     await _guard(() async {
-      final ok = await _bridge.move(entry.path, destination);
-      if (!ok) throw StateError('Could not move item.');
+      var moved = 0;
+      for (final entry in values) {
+        if (await _bridge.move(entry.path, destination)) moved++;
+      }
+      if (moved != values.length) {
+        throw StateError('Moved $moved of ${values.length} items. Some items could not be moved.');
+      }
+      notice = moved == 1 ? 'Item moved.' : '$moved items moved.';
       await _refreshCurrentInternal();
       await _refreshAllInternal();
     });
   }
 
   Future<void> deleteEntry(LibraryEntry entry) async {
+    await deleteEntries([entry]);
+  }
+
+  Future<void> deleteEntries(List<LibraryEntry> values) async {
+    if (values.isEmpty) return;
     await _guard(() async {
-      final ok = await _bridge.delete(entry.path);
-      if (!ok) throw StateError('Could not delete item.');
-      notice = '${entry.name} deleted.';
+      var deleted = 0;
+      for (final entry in values) {
+        if (await _bridge.delete(entry.path)) deleted++;
+      }
+      if (deleted != values.length) {
+        throw StateError('Deleted $deleted of ${values.length} items. Some items could not be deleted.');
+      }
+      notice = deleted == 1 ? 'Item deleted.' : '$deleted items deleted.';
       await _refreshCurrentInternal();
       await _refreshAllInternal();
     });
@@ -161,7 +199,7 @@ class LibraryController extends ChangeNotifier {
       final right = b.lastModified?.millisecondsSinceEpoch ?? 0;
       return right.compareTo(left);
     });
-    return values.take(6).toList();
+    return values.take(8).toList();
   }
 
   int countKind(LibraryKind kind) =>
