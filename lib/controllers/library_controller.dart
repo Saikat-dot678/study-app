@@ -100,6 +100,10 @@ class LibraryController extends ChangeNotifier {
   Future<void> shareEntry(LibraryEntry entry) async {
     try {
       await _bridge.share(entry.path);
+      if (_bridge.isDesktop) {
+        notice = 'File path copied to clipboard.';
+        notifyListeners();
+      }
     } catch (e) {
       error = e.toString().replaceFirst('Bad state: ', '');
       notifyListeners();
