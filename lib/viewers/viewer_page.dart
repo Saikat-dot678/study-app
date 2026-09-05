@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -26,12 +25,15 @@ Future<void> openStudyViewer(
     PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 360),
       reverseTransitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (_, animation, secondaryAnimation) => StudyViewerPage(
+      pageBuilder: (_, _, _) => StudyViewerPage(
         controller: controller,
         entry: entry,
       ),
-      transitionsBuilder: (_, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      transitionsBuilder: (_, animation, _, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
         return FadeTransition(
           opacity: curved,
           child: SlideTransition(
@@ -104,7 +106,10 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
         ),
         title: Row(
           children: [
-            FileIcon(entry: widget.entry, heroTag: 'entry:${widget.entry.path}'),
+            FileIcon(
+              entry: widget.entry,
+              heroTag: 'entry:${widget.entry.path}',
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -114,11 +119,17 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
                     widget.entry.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   Text(
                     fileMeta(widget.entry),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -158,8 +169,10 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
             : loadError != null
                 ? _ViewerFallback(
                     entry: widget.entry,
-                    message: 'This material could not be prepared for the in-app viewer.',
-                    onExternal: () => widget.controller.openExternally(widget.entry),
+                    message:
+                        'This material could not be prepared for the in-app viewer.',
+                    onExternal: () =>
+                        widget.controller.openExternally(widget.entry),
                   )
                 : _viewerForEntry(),
       ),
@@ -171,19 +184,30 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
     if (!entry.canPreviewInApp) {
       return _ViewerFallback(
         entry: entry,
-        message: 'This legacy or uncommon format is kept safely in your library, but needs another installed app to render it.',
+        message:
+            'This legacy or uncommon format is kept safely in your library, but needs another installed app to render it.',
         onExternal: () => widget.controller.openExternally(entry),
       );
     }
 
     return switch (entry.kind) {
       LibraryKind.pdf => _PdfReader(path: localPath!),
-      LibraryKind.note => _TextReader(path: localPath!, markdown: {'md', 'markdown'}.contains(entry.extension)),
-      LibraryKind.image => _ImageReader(path: localPath!, entry: entry),
+      LibraryKind.note => _TextReader(
+          path: localPath!,
+          markdown: {'md', 'markdown'}.contains(entry.extension),
+        ),
+      LibraryKind.image => _ImageReader(path: localPath!),
       LibraryKind.audio => _AudioReader(path: localPath!, entry: entry),
-      LibraryKind.video => _VideoReader(uri: contentUri!, entry: entry),
-      LibraryKind.book || LibraryKind.slides || LibraryKind.document || LibraryKind.spreadsheet =>
-        _PortableDocumentReader(path: localPath!, entry: entry),
+      LibraryKind.video => _VideoReader(uri: contentUri!),
+      LibraryKind.book ||
+      LibraryKind.slides ||
+      LibraryKind.document ||
+      LibraryKind.spreadsheet =>
+        _PortableDocumentReader(
+          path: localPath!,
+          entry: entry,
+          onExternal: () => widget.controller.openExternally(entry),
+        ),
       _ => _ViewerFallback(
           entry: entry,
           message: 'There is no built-in reader for this format yet.',
@@ -207,7 +231,10 @@ class _ViewerLoading extends StatelessWidget {
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
-          Text('Preparing locally…', style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            'Preparing locally…',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         ],
       ),
     );
@@ -225,8 +252,10 @@ class _PdfReader extends StatelessWidget {
       path,
       key: ValueKey(path),
       params: const PdfViewerParams(
-        enableTextSelection: true,
-        pageDropShadow: BoxShadow(blurRadius: 8, color: Color(0x22000000)),
+        pageDropShadow: BoxShadow(
+          blurRadius: 8,
+          color: Color(0x22000000),
+        ),
       ),
     );
   }
@@ -267,7 +296,10 @@ class _TextReaderState extends State<_TextReader> {
                 constraints: const BoxConstraints(maxWidth: 820),
                 child: Text(
                   data,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.65),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(height: 1.65),
                 ),
               ),
             ),
@@ -279,10 +311,9 @@ class _TextReaderState extends State<_TextReader> {
 }
 
 class _ImageReader extends StatelessWidget {
-  const _ImageReader({required this.path, required this.entry});
+  const _ImageReader({required this.path});
 
   final String path;
-  final LibraryEntry entry;
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +326,8 @@ class _ImageReader extends StatelessWidget {
         child: Image.file(
           File(path),
           fit: BoxFit.contain,
-          errorBuilder: (_, error, stackTrace) => const Icon(Icons.broken_image_outlined, size: 64),
+          errorBuilder: (_, _, _) =>
+              const Icon(Icons.broken_image_outlined, size: 64),
         ),
       ),
     );
@@ -343,7 +375,9 @@ class _AudioReaderState extends State<_AudioReader> {
   @override
   Widget build(BuildContext context) {
     if (error != null) {
-      return const Center(child: Text('This audio codec is not supported by the device player.'));
+      return const Center(
+        child: Text('This audio codec is not supported by the device player.'),
+      );
     }
     final scheme = Theme.of(context).colorScheme;
     return Center(
@@ -361,38 +395,63 @@ class _AudioReaderState extends State<_AudioReader> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [scheme.primaryContainer, scheme.tertiaryContainer],
+                    colors: [
+                      scheme.primaryContainer,
+                      scheme.tertiaryContainer,
+                    ],
                   ),
-                  boxShadow: [BoxShadow(color: scheme.primary.withValues(alpha: 0.18), blurRadius: 42, spreadRadius: 4)],
+                  boxShadow: [
+                    BoxShadow(
+                      color: scheme.primary.withValues(alpha: 0.18),
+                      blurRadius: 42,
+                      spreadRadius: 4,
+                    ),
+                  ],
                 ),
-                child: Icon(Icons.graphic_eq_rounded, size: 92, color: scheme.primary),
+                child: Icon(
+                  Icons.graphic_eq_rounded,
+                  size: 92,
+                  color: scheme.primary,
+                ),
               ),
               const SizedBox(height: 28),
               Text(
                 widget.entry.name,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 30),
               StreamBuilder<Duration>(
                 stream: player.positionStream,
-                builder: (context, positionSnapshot) {
-                  final position = positionSnapshot.data ?? Duration.zero;
-                  final maxMs = duration.inMilliseconds <= 0 ? 1 : duration.inMilliseconds;
-                  final value = position.inMilliseconds.clamp(0, maxMs).toDouble();
+                builder: (context, snapshot) {
+                  final position = snapshot.data ?? Duration.zero;
+                  final maxMs = duration.inMilliseconds <= 0
+                      ? 1
+                      : duration.inMilliseconds;
+                  final value = position.inMilliseconds
+                      .clamp(0, maxMs)
+                      .toDouble();
                   return Column(
                     children: [
                       Slider(
                         min: 0,
                         max: maxMs.toDouble(),
                         value: value,
-                        onChanged: (value) => player.seek(Duration(milliseconds: value.round())),
+                        onChanged: (value) => player.seek(
+                          Duration(milliseconds: value.round()),
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [Text(_time(position)), Text(_time(duration))],
+                          children: [
+                            Text(_time(position)),
+                            Text(_time(duration)),
+                          ],
                         ),
                       ),
                     ],
@@ -406,8 +465,11 @@ class _AudioReaderState extends State<_AudioReader> {
                   IconButton.filledTonal(
                     iconSize: 28,
                     onPressed: () async {
-                      final position = player.position - const Duration(seconds: 10);
-                      await player.seek(position.isNegative ? Duration.zero : position);
+                      final target =
+                          player.position - const Duration(seconds: 10);
+                      await player.seek(
+                        target.isNegative ? Duration.zero : target,
+                      );
                     },
                     icon: const Icon(Icons.replay_10_rounded),
                   ),
@@ -421,15 +483,23 @@ class _AudioReaderState extends State<_AudioReader> {
                           shape: const CircleBorder(),
                           padding: const EdgeInsets.all(22),
                         ),
-                        onPressed: () => playing ? player.pause() : player.play(),
-                        child: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 34),
+                        onPressed: () =>
+                            playing ? player.pause() : player.play(),
+                        child: Icon(
+                          playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 34,
+                        ),
                       );
                     },
                   ),
                   const SizedBox(width: 20),
                   IconButton.filledTonal(
                     iconSize: 28,
-                    onPressed: () => player.seek(player.position + const Duration(seconds: 10)),
+                    onPressed: () => player.seek(
+                      player.position + const Duration(seconds: 10),
+                    ),
                     icon: const Icon(Icons.forward_10_rounded),
                   ),
                 ],
@@ -460,10 +530,9 @@ class _AudioReaderState extends State<_AudioReader> {
 }
 
 class _VideoReader extends StatefulWidget {
-  const _VideoReader({required this.uri, required this.entry});
+  const _VideoReader({required this.uri});
 
   final String uri;
-  final LibraryEntry entry;
 
   @override
   State<_VideoReader> createState() => _VideoReaderState();
@@ -501,7 +570,9 @@ class _VideoReaderState extends State<_VideoReader> {
   @override
   Widget build(BuildContext context) {
     if (error != null) {
-      return const Center(child: Text('This video codec is not supported by the device player.'));
+      return const Center(
+        child: Text('This video codec is not supported by the device player.'),
+      );
     }
     if (!controller.value.isInitialized) return const _ViewerLoading();
 
@@ -516,7 +587,9 @@ class _VideoReaderState extends State<_VideoReader> {
           children: [
             Center(
               child: AspectRatio(
-                aspectRatio: controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio,
+                aspectRatio: controller.value.aspectRatio == 0
+                    ? 16 / 9
+                    : controller.value.aspectRatio,
                 child: VideoPlayer(controller),
               ),
             ),
@@ -530,7 +603,11 @@ class _VideoReaderState extends State<_VideoReader> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Color(0x44000000), Color(0x00000000), Color(0x99000000)],
+                      colors: [
+                        Color(0x44000000),
+                        Color(0x00000000),
+                        Color(0x99000000),
+                      ],
                     ),
                   ),
                 ),
@@ -548,8 +625,15 @@ class _VideoReaderState extends State<_VideoReader> {
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.all(22),
                   ),
-                  onPressed: () => controller.value.isPlaying ? controller.pause() : controller.play(),
-                  child: Icon(controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 36),
+                  onPressed: () => controller.value.isPlaying
+                      ? controller.pause()
+                      : controller.play(),
+                  child: Icon(
+                    controller.value.isPlaying
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
+                    size: 36,
+                  ),
                 ),
               ),
             ),
@@ -576,18 +660,34 @@ class _VideoReaderState extends State<_VideoReader> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Text(_time(controller.value.position), style: const TextStyle(color: Colors.white)),
-                          const Text(' / ', style: TextStyle(color: Colors.white54)),
-                          Text(_time(controller.value.duration), style: const TextStyle(color: Colors.white70)),
+                          Text(
+                            _time(controller.value.position),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const Text(
+                            ' / ',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                          Text(
+                            _time(controller.value.duration),
+                            style: const TextStyle(color: Colors.white70),
+                          ),
                           const Spacer(),
                           PopupMenuButton<double>(
                             tooltip: 'Playback speed',
                             color: Theme.of(context).colorScheme.surface,
-                            icon: const Icon(Icons.speed_rounded, color: Colors.white),
+                            icon: const Icon(
+                              Icons.speed_rounded,
+                              color: Colors.white,
+                            ),
                             onSelected: controller.setPlaybackSpeed,
                             itemBuilder: (_) => [
-                              for (final speed in [0.75, 1.0, 1.25, 1.5, 2.0])
-                                PopupMenuItem(value: speed, child: Text('${speed}×')),
+                              for (final speed
+                                  in [0.75, 1.0, 1.25, 1.5, 2.0])
+                                PopupMenuItem(
+                                  value: speed,
+                                  child: Text('$speed×'),
+                                ),
                             ],
                           ),
                         ],
@@ -605,33 +705,48 @@ class _VideoReaderState extends State<_VideoReader> {
 }
 
 class _PortableDocumentReader extends StatefulWidget {
-  const _PortableDocumentReader({required this.path, required this.entry});
+  const _PortableDocumentReader({
+    required this.path,
+    required this.entry,
+    required this.onExternal,
+  });
 
   final String path;
   final LibraryEntry entry;
+  final VoidCallback onExternal;
 
   @override
-  State<_PortableDocumentReader> createState() => _PortableDocumentReaderState();
+  State<_PortableDocumentReader> createState() =>
+      _PortableDocumentReaderState();
 }
 
 class _PortableDocumentReaderState extends State<_PortableDocumentReader> {
-  late final Future<ExtractedDocument> document = extractPortableDocument(widget.path, widget.entry.extension);
+  late final Future<ExtractedDocument> document = extractPortableDocument(
+    widget.path,
+    widget.entry.extension,
+  );
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<ExtractedDocument>(
       future: document,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) return const _ViewerLoading();
-        if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const _ViewerLoading();
+        }
+        if (snapshot.hasError ||
+            snapshot.data == null ||
+            snapshot.data!.isEmpty) {
           return _ViewerFallback(
             entry: widget.entry,
-            message: 'The file is valid, but its readable text could not be extracted offline.',
-            onExternal: () {},
-            showExternalButton: false,
+            message:
+                'The file is valid, but its readable content could not be extracted offline.',
+            onExternal: widget.onExternal,
           );
         }
-        final sections = snapshot.data!.sections.where((section) => section.body.trim().isNotEmpty).toList();
+        final sections = snapshot.data!.sections
+            .where((section) => section.body.trim().isNotEmpty)
+            .toList();
         return SelectionArea(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 80),
@@ -650,13 +765,23 @@ class _PortableDocumentReaderState extends State<_PortableDocumentReader> {
                         children: [
                           Text(
                             section.title,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
                                   fontWeight: FontWeight.w800,
-                                  color: Theme.of(context).colorScheme.primary,
+                                  color:
+                                      Theme.of(context).colorScheme.primary,
                                 ),
                           ),
                           const SizedBox(height: 12),
-                          Text(section.body, style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.55)),
+                          Text(
+                            section.body,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyLarge
+                                ?.copyWith(height: 1.55),
+                          ),
                         ],
                       ),
                     ),
@@ -676,13 +801,11 @@ class _ViewerFallback extends StatelessWidget {
     required this.entry,
     required this.message,
     required this.onExternal,
-    this.showExternalButton = true,
   });
 
   final LibraryEntry entry;
   final String message;
   final VoidCallback onExternal;
-  final bool showExternalButton;
 
   @override
   Widget build(BuildContext context) {
@@ -699,18 +822,19 @@ class _ViewerFallback extends StatelessWidget {
               const SizedBox(height: 18),
               Text(
                 'Still in your library',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(message, textAlign: TextAlign.center),
-              if (showExternalButton) ...[
-                const SizedBox(height: 22),
-                FilledButton.icon(
-                  onPressed: onExternal,
-                  icon: const Icon(Icons.open_in_new_rounded),
-                  label: const Text('Open in another app'),
-                ),
-              ],
+              const SizedBox(height: 22),
+              FilledButton.icon(
+                onPressed: onExternal,
+                icon: const Icon(Icons.open_in_new_rounded),
+                label: const Text('Open in another app'),
+              ),
             ],
           ),
         ),
@@ -723,5 +847,7 @@ String _time(Duration value) {
   final hours = value.inHours;
   final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
   final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return hours > 0 ? '$hours:$minutes:$seconds' : '${value.inMinutes}:$seconds';
+  return hours > 0
+      ? '$hours:$minutes:$seconds'
+      : '${value.inMinutes}:$seconds';
 }
