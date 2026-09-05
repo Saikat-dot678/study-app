@@ -88,7 +88,7 @@ class _List extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 110),
       itemCount: controller.entries.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final entry = controller.entries[index];
         return FileRow(
