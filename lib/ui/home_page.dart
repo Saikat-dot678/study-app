@@ -29,58 +29,47 @@ class HomePage extends StatelessWidget {
       return controller.materialCountUnder(space.path) > 0 || controller.directFolderCount(space.path) > 0;
     }).toList();
     final width = MediaQuery.sizeOf(context).width;
-    final maxWidth = width > 1180 ? 1100.0 : double.infinity;
 
     return RefreshIndicator(
       onRefresh: controller.refresh,
       child: ListView(
         padding: EdgeInsets.fromLTRB(width > 900 ? 28 : 18, 10, width > 900 ? 28 : 18, 130),
         children: [
-          Align(
-            alignment: Alignment.topCenter,
+          Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
+              constraints: const BoxConstraints(maxWidth: 1100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Appear(child: _SearchLauncher(onTap: openSearch)),
+                  _SearchLauncher(onTap: openSearch),
                   const SizedBox(height: 16),
-                  _Appear(
-                    delay: 60,
-                    child: _HeroCard(
-                      controller: controller,
-                      onCreateSpace: () => showCreateSpaceSheet(context, controller),
-                      onOpenInbox: () => openLibrary('Inbox'),
-                    ),
+                  _Hero(
+                    controller: controller,
+                    onCreate: () => showCreateSpaceSheet(context, controller),
+                    onInbox: () => openLibrary('Inbox'),
                   ),
                   const SizedBox(height: 28),
-                  _Appear(
-                    delay: 100,
-                    child: SectionTitle(
-                      title: 'Your spaces',
-                      action: 'Open library',
-                      onTap: () => openLibrary(null),
-                    ),
+                  SectionTitle(
+                    title: 'Your spaces',
+                    action: 'Open library',
+                    onTap: () => openLibrary(null),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Organize by semester, GATE, project, research, club work—or anything else.',
+                    'Semester, GATE, research, projects, club work—build the hierarchy that matches your life.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 13),
-                  _Appear(
-                    delay: 135,
-                    child: _SpacesGrid(
-                      controller: controller,
-                      spaces: spaces,
-                      onOpen: openLibrary,
-                      onCreate: () => showCreateSpaceSheet(context, controller),
-                    ),
+                  _SpacesGrid(
+                    controller: controller,
+                    spaces: spaces,
+                    onOpen: (path) => openLibrary(path),
+                    onCreate: () => showCreateSpaceSheet(context, controller),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
                   _InboxStrip(
                     count: controller.directMaterialCount('Inbox'),
-                    onOpen: () => openLibrary('Inbox'),
+                    onTap: () => openLibrary('Inbox'),
                   ),
                   if (controller.recentFiles.isNotEmpty) ...[
                     const SizedBox(height: 30),
@@ -94,7 +83,7 @@ class HomePage extends StatelessWidget {
                         separatorBuilder: (_, _) => const SizedBox(width: 10),
                         itemBuilder: (context, index) {
                           final entry = controller.recentFiles[index];
-                          return _ContinueCard(
+                          return _RecentCard(
                             entry: entry,
                             onTap: () => openStudyViewer(context, controller, entry),
                           );
@@ -109,11 +98,11 @@ class HomePage extends StatelessWidget {
                     spacing: 9,
                     runSpacing: 9,
                     children: [
-                      _CountPill(icon: Icons.folder_copy_rounded, label: 'Spaces', count: spaces.length),
-                      _CountPill(icon: Icons.picture_as_pdf_rounded, label: 'PDFs', count: controller.countKind(LibraryKind.pdf)),
-                      _CountPill(icon: Icons.slideshow_rounded, label: 'Slides', count: controller.countKind(LibraryKind.slides)),
-                      _CountPill(icon: Icons.graphic_eq_rounded, label: 'Audio', count: controller.countKind(LibraryKind.audio)),
-                      _CountPill(icon: Icons.movie_rounded, label: 'Videos', count: controller.countKind(LibraryKind.video)),
+                      _Metric(icon: Icons.folder_copy_rounded, label: 'Spaces', count: spaces.length),
+                      _Metric(icon: Icons.picture_as_pdf_rounded, label: 'PDFs', count: controller.countKind(LibraryKind.pdf)),
+                      _Metric(icon: Icons.slideshow_rounded, label: 'Slides', count: controller.countKind(LibraryKind.slides)),
+                      _Metric(icon: Icons.movie_rounded, label: 'Videos', count: controller.countKind(LibraryKind.video)),
+                      _Metric(icon: Icons.graphic_eq_rounded, label: 'Audio', count: controller.countKind(LibraryKind.audio)),
                     ],
                   ),
                 ],
@@ -134,7 +123,7 @@ class _SearchLauncher extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.surfaceContainerLow.withValues(alpha: 0.84),
+      color: scheme.surfaceContainerLow.withValues(alpha: 0.86),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.38)),
@@ -162,34 +151,33 @@ class _SearchLauncher extends StatelessWidget {
   }
 }
 
-class _HeroCard extends StatefulWidget {
-  const _HeroCard({required this.controller, required this.onCreateSpace, required this.onOpenInbox});
+class _Hero extends StatefulWidget {
+  const _Hero({required this.controller, required this.onCreate, required this.onInbox});
 
   final LibraryController controller;
-  final VoidCallback onCreateSpace;
-  final VoidCallback onOpenInbox;
+  final VoidCallback onCreate;
+  final VoidCallback onInbox;
 
   @override
-  State<_HeroCard> createState() => _HeroCardState();
+  State<_Hero> createState() => _HeroState();
 }
 
-class _HeroCardState extends State<_HeroCard> {
-  bool shifted = false;
+class _HeroState extends State<_Hero> {
+  bool moved = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => shifted = true);
+      if (mounted) setState(() => moved = true);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final controller = widget.controller;
-    final files = controller.allEntries.where((item) => !item.isDirectory).length;
     final wide = MediaQuery.sizeOf(context).width > 720;
+    final files = widget.controller.allEntries.where((entry) => !entry.isDirectory).length;
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -197,35 +185,26 @@ class _HeroCardState extends State<_HeroCard> {
         borderRadius: BorderRadius.circular(28),
         color: scheme.surfaceContainerLow,
         border: Border.all(color: scheme.primary.withValues(alpha: 0.22)),
-        boxShadow: [
-          BoxShadow(color: scheme.primary.withValues(alpha: 0.08), blurRadius: 34, spreadRadius: -12),
-        ],
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            scheme.primary.withValues(alpha: 0.16),
+            scheme.surfaceContainerLow,
+            scheme.tertiary.withValues(alpha: 0.10),
+          ],
+        ),
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    scheme.primary.withValues(alpha: 0.20),
-                    scheme.secondary.withValues(alpha: 0.06),
-                    scheme.tertiary.withValues(alpha: 0.12),
-                  ],
-                ),
-              ),
-            ),
-          ),
           AnimatedPositioned(
-            duration: const Duration(milliseconds: 1500),
+            duration: const Duration(milliseconds: 1400),
             curve: Curves.easeInOutCubic,
-            right: shifted ? -35 : -75,
-            top: shifted ? -65 : -30,
+            right: moved ? -35 : -75,
+            top: moved ? -55 : -20,
             child: Container(
-              width: wide ? 250 : 185,
-              height: wide ? 250 : 185,
+              width: wide ? 250 : 180,
+              height: wide ? 250 : 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
@@ -241,42 +220,28 @@ class _HeroCardState extends State<_HeroCard> {
               children: [
                 Row(
                   children: [
-                    _GlassBadge(icon: Icons.offline_bolt_rounded, text: 'Offline by design'),
+                    _Badge(icon: Icons.offline_bolt_rounded, label: 'Offline by design'),
                     const Spacer(),
                     Text('$files materials', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
                   ],
                 ),
                 SizedBox(height: wide ? 38 : 27),
-                Text(
-                  'Build your own\nstudy system.',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontSize: wide ? 40 : null,
-                        height: 0.98,
-                      ),
-                ),
+                Text('Build your own\nstudy system.', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: wide ? 40 : null, height: 0.98)),
                 const SizedBox(height: 12),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 650),
+                  constraints: const BoxConstraints(maxWidth: 660),
                   child: Text(
-                    'Semester-wise, GATE-wise, research-wise—or completely custom. Every folder can contain more folders and material together.',
+                    'Every folder can contain folders and material together. Use templates when useful, ignore them when they are not.',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant, height: 1.45),
                   ),
                 ),
-                const SizedBox(height: 21),
+                const SizedBox(height: 20),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    FilledButton.icon(
-                      onPressed: widget.onCreateSpace,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Create a space'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: widget.onOpenInbox,
-                      icon: const Icon(Icons.inbox_rounded),
-                      label: const Text('Open Inbox'),
-                    ),
+                    FilledButton.icon(onPressed: widget.onCreate, icon: const Icon(Icons.add_rounded), label: const Text('Create a space')),
+                    OutlinedButton.icon(onPressed: widget.onInbox, icon: const Icon(Icons.inbox_rounded), label: const Text('Open Inbox')),
                   ],
                 ),
               ],
@@ -293,42 +258,42 @@ class _SpacesGrid extends StatelessWidget {
 
   final LibraryController controller;
   final List<LibraryEntry> spaces;
-  final ValueChanged<String?> onOpen;
+  final ValueChanged<String> onOpen;
   final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final count = width > 1050 ? 4 : width > 650 ? 3 : 2;
-    final children = <Widget>[
+    final columns = width > 1050 ? 4 : width > 650 ? 3 : 2;
+    final cards = <Widget>[
       for (final space in spaces)
         _SpaceCard(
           entry: space,
+          folders: controller.directFolderCount(space.path),
           materials: controller.materialCountUnder(space.path),
-          directFolders: controller.directFolderCount(space.path),
           onTap: () => onOpen(space.path),
         ),
-      _CreateSpaceCard(onTap: onCreate),
+      _CreateCard(onTap: onCreate),
     ];
 
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: count,
+      crossAxisCount: columns,
       mainAxisSpacing: 10,
       crossAxisSpacing: 10,
       childAspectRatio: width > 650 ? 1.42 : 1.05,
-      children: children,
+      children: cards,
     );
   }
 }
 
 class _SpaceCard extends StatelessWidget {
-  const _SpaceCard({required this.entry, required this.materials, required this.directFolders, required this.onTap});
+  const _SpaceCard({required this.entry, required this.folders, required this.materials, required this.onTap});
 
   final LibraryEntry entry;
+  final int folders;
   final int materials;
-  final int directFolders;
   final VoidCallback onTap;
 
   @override
@@ -349,7 +314,7 @@ class _SpaceCard extends StatelessWidget {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [scheme.primary.withValues(alpha: 0.28), scheme.secondary.withValues(alpha: 0.16)]),
+                      gradient: LinearGradient(colors: [scheme.primary.withValues(alpha: 0.28), scheme.secondary.withValues(alpha: 0.14)]),
                       borderRadius: BorderRadius.circular(13),
                     ),
                     child: Icon(Icons.folder_rounded, color: scheme.primary),
@@ -359,9 +324,9 @@ class _SpaceCard extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w850, fontSize: 15)),
+              Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               const SizedBox(height: 4),
-              Text('$directFolders folders • $materials materials', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+              Text('$folders folders • $materials materials', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
             ],
           ),
         ),
@@ -370,8 +335,8 @@ class _SpaceCard extends StatelessWidget {
   }
 }
 
-class _CreateSpaceCard extends StatelessWidget {
-  const _CreateSpaceCard({required this.onTap});
+class _CreateCard extends StatelessWidget {
+  const _CreateCard({required this.onTap});
   final VoidCallback onTap;
 
   @override
@@ -386,16 +351,16 @@ class _CreateSpaceCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(15),
+        child: const Padding(
+          padding: EdgeInsets.all(15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.add_circle_outline_rounded, color: scheme.primary, size: 30),
-              const Spacer(),
-              const Text('New space', style: TextStyle(fontWeight: FontWeight.w850, fontSize: 15)),
-              const SizedBox(height: 4),
-              Text('Semester • GATE • Project • Custom', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+              Icon(Icons.add_circle_outline_rounded, size: 30),
+              Spacer(),
+              Text('New space', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              SizedBox(height: 4),
+              Text('Semester • GATE • Project • Custom', maxLines: 2, overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
@@ -405,22 +370,22 @@ class _CreateSpaceCard extends StatelessWidget {
 }
 
 class _InboxStrip extends StatelessWidget {
-  const _InboxStrip({required this.count, required this.onOpen});
+  const _InboxStrip({required this.count, required this.onTap});
   final int count;
-  final VoidCallback onOpen;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: scheme.surfaceContainerLow.withValues(alpha: 0.82),
+      color: scheme.surfaceContainerLow.withValues(alpha: 0.84),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.36)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: onOpen,
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(15),
           child: Row(
@@ -436,7 +401,7 @@ class _InboxStrip extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Inbox', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w850)),
+                    Text('Inbox', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 2),
                     Text(count == 0 ? 'Shared and unorganized material lands here.' : '$count item${count == 1 ? '' : 's'} waiting to be organized.', style: Theme.of(context).textTheme.bodySmall),
                   ],
@@ -451,10 +416,10 @@ class _InboxStrip extends StatelessWidget {
   }
 }
 
-class _GlassBadge extends StatelessWidget {
-  const _GlassBadge({required this.icon, required this.text});
+class _Badge extends StatelessWidget {
+  const _Badge({required this.icon, required this.label});
   final IconData icon;
-  final String text;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -471,16 +436,15 @@ class _GlassBadge extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: scheme.secondary),
           const SizedBox(width: 6),
-          Text(text, style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800)),
+          Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800)),
         ],
       ),
     );
   }
 }
 
-class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({required this.entry, required this.onTap});
-
+class _RecentCard extends StatelessWidget {
+  const _RecentCard({required this.entry, required this.onTap});
   final LibraryEntry entry;
   final VoidCallback onTap;
 
@@ -518,8 +482,8 @@ class _ContinueCard extends StatelessWidget {
   }
 }
 
-class _CountPill extends StatelessWidget {
-  const _CountPill({required this.icon, required this.label, required this.count});
+class _Metric extends StatelessWidget {
+  const _Metric({required this.icon, required this.label, required this.count});
   final IconData icon;
   final String label;
   final int count;
@@ -542,26 +506,6 @@ class _CountPill extends StatelessWidget {
           Text('$count $label', style: const TextStyle(fontWeight: FontWeight.w700)),
         ],
       ),
-    );
-  }
-}
-
-class _Appear extends StatelessWidget {
-  const _Appear({required this.child, this.delay = 0});
-  final Widget child;
-  final int delay;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 380 + delay),
-      curve: Curves.easeOutCubic,
-      tween: Tween(begin: 0, end: 1),
-      builder: (context, value, child) => Opacity(
-        opacity: value,
-        child: Transform.translate(offset: Offset(0, 10 * (1 - value)), child: child),
-      ),
-      child: child,
     );
   }
 }
