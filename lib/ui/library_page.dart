@@ -28,18 +28,28 @@ class _LibraryPageState extends State<LibraryPage> {
 
   List<LibraryEntry> get visibleEntries {
     final values = controller.entries.where((entry) {
-      if (controller.currentPath.isNotEmpty || !entry.isDirectory || !_legacyRoots.contains(entry.name)) return true;
-      return controller.materialCountUnder(entry.path) > 0 || controller.directFolderCount(entry.path) > 0;
+      if (controller.currentPath.isNotEmpty ||
+          !entry.isDirectory ||
+          !_legacyRoots.contains(entry.name)) {
+        return true;
+      }
+      return controller.materialCountUnder(entry.path) > 0 ||
+          controller.directFolderCount(entry.path) > 0;
     }).toList();
 
-    int compareName(LibraryEntry a, LibraryEntry b) => a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    int compareName(LibraryEntry a, LibraryEntry b) =>
+        a.name.toLowerCase().compareTo(b.name.toLowerCase());
+
     values.sort((a, b) {
       if (a.isDirectory != b.isDirectory) return a.isDirectory ? -1 : 1;
       return switch (sort) {
         _LibrarySort.name => compareName(a, b),
         _LibrarySort.newest =>
-          (b.lastModified?.millisecondsSinceEpoch ?? 0).compareTo(a.lastModified?.millisecondsSinceEpoch ?? 0),
-        _LibrarySort.type => a.kind.index == b.kind.index ? compareName(a, b) : a.kind.index.compareTo(b.kind.index),
+          (b.lastModified?.millisecondsSinceEpoch ?? 0)
+              .compareTo(a.lastModified?.millisecondsSinceEpoch ?? 0),
+        _LibrarySort.type => a.kind.index == b.kind.index
+            ? compareName(a, b)
+            : a.kind.index.compareTo(b.kind.index),
       };
     });
     return values;
@@ -55,11 +65,16 @@ class _LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!controller.connected) return ConnectLibraryView(controller: controller);
+    if (!controller.connected) {
+      return ConnectLibraryView(controller: controller);
+    }
+
     final entries = visibleEntries;
     final folders = entries.where((entry) => entry.isDirectory).toList();
     final materials = entries.where((entry) => !entry.isDirectory).toList();
-    final title = controller.currentPath.isEmpty ? 'Library' : controller.currentPath.split('/').last;
+    final title = controller.currentPath.isEmpty
+        ? 'Library'
+        : controller.currentPath.split('/').last;
 
     return Column(
       children: [
@@ -70,7 +85,9 @@ class _LibraryPageState extends State<LibraryPage> {
                   key: const ValueKey('selected'),
                   count: selected.length,
                   onClose: _clearSelection,
-                  onSelectAll: () => setState(() => selected.addAll(entries.map((entry) => entry.path))),
+                  onSelectAll: () => setState(
+                    () => selected.addAll(entries.map((entry) => entry.path)),
+                  ),
                 )
               : _LibraryHeader(
                   key: const ValueKey('normal'),
@@ -78,21 +95,41 @@ class _LibraryPageState extends State<LibraryPage> {
                   controller: controller,
                   sort: sort,
                   onSort: (value) => setState(() => sort = value),
-                  onImport: () => showSmartImportSheet(context, controller, basePath: controller.currentPath),
-                  onStructure: () => showCreateSpaceSheet(context, controller, parent: controller.currentPath),
+                  onImport: () => showSmartImportSheet(
+                    context,
+                    controller,
+                    basePath: controller.currentPath,
+                  ),
+                  onStructure: () => showCreateSpaceSheet(
+                    context,
+                    controller,
+                    parent: controller.currentPath,
+                  ),
                 ),
         ),
         if (!selecting) _Breadcrumbs(controller: controller),
         if (!selecting && controller.currentPath == 'Inbox')
           _InboxGuide(
             count: materials.length,
-            onImport: () => showSmartImportSheet(context, controller, basePath: 'Inbox'),
+            onImport: () => showSmartImportSheet(
+              context,
+              controller,
+              basePath: 'Inbox',
+            ),
           ),
         Expanded(
           child: entries.isEmpty
               ? _EmptyFolder(
-                  onImport: () => showSmartImportSheet(context, controller, basePath: controller.currentPath),
-                  onStructure: () => showCreateSpaceSheet(context, controller, parent: controller.currentPath),
+                  onImport: () => showSmartImportSheet(
+                    context,
+                    controller,
+                    basePath: controller.currentPath,
+                  ),
+                  onStructure: () => showCreateSpaceSheet(
+                    context,
+                    controller,
+                    parent: controller.currentPath,
+                  ),
                 )
               : _FolderCanvas(
                   controller: controller,
@@ -125,16 +162,25 @@ class _LibraryPageState extends State<LibraryPage> {
     }
   }
 
-  List<LibraryEntry> get _selectedEntries =>
-      controller.entries.where((entry) => selected.contains(entry.path)).toList();
+  List<LibraryEntry> get _selectedEntries => controller.entries
+      .where((entry) => selected.contains(entry.path))
+      .toList();
 
   Future<void> _moveSelected() async {
-    final moved = await showBulkMoveSheet(context, controller, _selectedEntries);
+    final moved = await showBulkMoveSheet(
+      context,
+      controller,
+      _selectedEntries,
+    );
     if (moved && mounted) _clearSelection();
   }
 
   Future<void> _deleteSelected() async {
-    final deleted = await confirmBulkDelete(context, controller, _selectedEntries);
+    final deleted = await confirmBulkDelete(
+      context,
+      controller,
+      _selectedEntries,
+    );
     if (deleted && mounted) _clearSelection();
   }
 }
@@ -161,36 +207,65 @@ class _LibraryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width > 760;
     final scheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: EdgeInsets.fromLTRB(wide ? 22 : 12, 10, wide ? 22 : 10, 5),
       child: Row(
         children: [
           if (controller.currentPath.isNotEmpty)
-            IconButton.filledTonal(onPressed: controller.goUp, icon: const Icon(Icons.arrow_back_rounded)),
+            IconButton.filledTonal(
+              onPressed: controller.goUp,
+              icon: const Icon(Icons.arrow_back_rounded),
+            ),
           if (controller.currentPath.isNotEmpty) const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 2),
                 Text(
                   controller.currentPath.isEmpty
                       ? 'Your spaces, folders and materials'
-                      : '${controller.currentFolders.length} folders • ${controller.currentMaterials.length} materials',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+                      : '${controller.currentFolders.length} folders • '
+                          '${controller.currentMaterials.length} materials',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(color: scheme.onSurfaceVariant),
                 ),
               ],
             ),
           ),
           if (wide) ...[
-            OutlinedButton.icon(onPressed: onStructure, icon: const Icon(Icons.account_tree_rounded), label: const Text('Structure')),
+            OutlinedButton.icon(
+              onPressed: onStructure,
+              icon: const Icon(Icons.account_tree_rounded),
+              label: const Text('Structure'),
+            ),
             const SizedBox(width: 8),
-            FilledButton.icon(onPressed: onImport, icon: const Icon(Icons.add_rounded), label: const Text('Import')),
+            FilledButton.icon(
+              onPressed: onImport,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Import'),
+            ),
             const SizedBox(width: 8),
           ] else ...[
-            IconButton(tooltip: 'Build structure', onPressed: onStructure, icon: const Icon(Icons.account_tree_rounded)),
-            IconButton(tooltip: 'Smart import', onPressed: onImport, icon: const Icon(Icons.add_circle_outline_rounded)),
+            IconButton(
+              tooltip: 'Build structure',
+              onPressed: onStructure,
+              icon: const Icon(Icons.account_tree_rounded),
+            ),
+            IconButton(
+              tooltip: 'Smart import',
+              onPressed: onImport,
+              icon: const Icon(Icons.add_circle_outline_rounded),
+            ),
           ],
           PopupMenuButton<_LibrarySort>(
             tooltip: 'Sort',
@@ -206,7 +281,11 @@ class _LibraryHeader extends StatelessWidget {
           IconButton(
             tooltip: controller.gridMode ? 'List view' : 'Grid view',
             onPressed: () => controller.setGridMode(!controller.gridMode),
-            icon: Icon(controller.gridMode ? Icons.view_list_rounded : Icons.grid_view_rounded),
+            icon: Icon(
+              controller.gridMode
+                  ? Icons.view_list_rounded
+                  : Icons.grid_view_rounded,
+            ),
           ),
         ],
       ),
@@ -234,15 +313,31 @@ class _FolderCanvas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width > 900;
+
     return CustomScrollView(
       slivers: [
         if (folders.isNotEmpty) ...[
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(wide ? 22 : 14, 12, wide ? 22 : 14, 8),
-            sliver: const SliverToBoxAdapter(child: _SectionLabel(title: 'Folders', icon: Icons.folder_copy_rounded)),
+            padding: EdgeInsets.fromLTRB(
+              wide ? 22 : 14,
+              12,
+              wide ? 22 : 14,
+              8,
+            ),
+            sliver: const SliverToBoxAdapter(
+              child: _SectionLabel(
+                title: 'Folders',
+                icon: Icons.folder_copy_rounded,
+              ),
+            ),
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(wide ? 22 : 14, 0, wide ? 22 : 14, 18),
+            padding: EdgeInsets.fromLTRB(
+              wide ? 22 : 14,
+              0,
+              wide ? 22 : 14,
+              18,
+            ),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 285,
@@ -261,7 +356,11 @@ class _FolderCanvas extends StatelessWidget {
                     selected: selected.contains(entry.path),
                     onTap: () => onTap(entry),
                     onLongPress: () => onLongPress(entry),
-                    onMenu: () => showEntryActions(context, controller, entry),
+                    onMenu: () => showEntryActions(
+                      context,
+                      controller,
+                      entry,
+                    ),
                   );
                 },
                 childCount: folders.length,
@@ -271,17 +370,29 @@ class _FolderCanvas extends StatelessWidget {
         ],
         if (materials.isNotEmpty) ...[
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(wide ? 22 : 14, folders.isEmpty ? 12 : 2, wide ? 22 : 14, 8),
+            padding: EdgeInsets.fromLTRB(
+              wide ? 22 : 14,
+              folders.isEmpty ? 12 : 2,
+              wide ? 22 : 14,
+              8,
+            ),
             sliver: SliverToBoxAdapter(
               child: _SectionLabel(
-                title: folders.isEmpty ? 'Materials' : 'Materials in this folder',
+                title: folders.isEmpty
+                    ? 'Materials'
+                    : 'Materials in this folder',
                 icon: Icons.auto_stories_rounded,
               ),
             ),
           ),
           if (controller.gridMode)
             SliverPadding(
-              padding: EdgeInsets.fromLTRB(wide ? 22 : 14, 0, wide ? 22 : 14, 120),
+              padding: EdgeInsets.fromLTRB(
+                wide ? 22 : 14,
+                0,
+                wide ? 22 : 14,
+                120,
+              ),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 190,
@@ -298,7 +409,11 @@ class _FolderCanvas extends StatelessWidget {
                       selectionActive: selected.isNotEmpty,
                       onTap: () => onTap(entry),
                       onLongPress: () => onLongPress(entry),
-                      onMenu: () => showEntryActions(context, controller, entry),
+                      onMenu: () => showEntryActions(
+                        context,
+                        controller,
+                        entry,
+                      ),
                     );
                   },
                   childCount: materials.length,
@@ -307,7 +422,12 @@ class _FolderCanvas extends StatelessWidget {
             )
           else
             SliverPadding(
-              padding: EdgeInsets.fromLTRB(wide ? 22 : 14, 0, wide ? 22 : 14, 120),
+              padding: EdgeInsets.fromLTRB(
+                wide ? 22 : 14,
+                0,
+                wide ? 22 : 14,
+                120,
+              ),
               sliver: SliverList.builder(
                 itemCount: materials.length,
                 itemBuilder: (context, index) {
@@ -321,8 +441,18 @@ class _FolderCanvas extends StatelessWidget {
                       onTap: () => onTap(entry),
                       onLongPress: () => onLongPress(entry),
                       trailing: selected.isNotEmpty
-                          ? Checkbox(value: isSelected, onChanged: (_) => onTap(entry))
-                          : IconButton(icon: const Icon(Icons.more_horiz_rounded), onPressed: () => showEntryActions(context, controller, entry)),
+                          ? Checkbox(
+                              value: isSelected,
+                              onChanged: (_) => onTap(entry),
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.more_horiz_rounded),
+                              onPressed: () => showEntryActions(
+                                context,
+                                controller,
+                                entry,
+                              ),
+                            ),
                     ),
                   );
                 },
@@ -358,11 +488,18 @@ class _FolderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return Material(
-      color: selected ? scheme.primary.withValues(alpha: 0.16) : scheme.surfaceContainerLow,
+      color: selected
+          ? scheme.primary.withValues(alpha: 0.16)
+          : scheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: selected ? scheme.primary.withValues(alpha: 0.5) : scheme.outlineVariant.withValues(alpha: 0.38)),
+        side: BorderSide(
+          color: selected
+              ? scheme.primary.withValues(alpha: 0.5)
+              : scheme.outlineVariant.withValues(alpha: 0.38),
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -376,10 +513,19 @@ class _FolderCard extends StatelessWidget {
                 width: 54,
                 height: 54,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [scheme.primary.withValues(alpha: 0.28), scheme.secondary.withValues(alpha: 0.13)]),
+                  gradient: LinearGradient(
+                    colors: [
+                      scheme.primary.withValues(alpha: 0.28),
+                      scheme.secondary.withValues(alpha: 0.13),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(Icons.folder_rounded, size: 28, color: scheme.primary),
+                child: Icon(
+                  Icons.folder_rounded,
+                  size: 28,
+                  color: scheme.primary,
+                ),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -387,20 +533,32 @@ class _FolderCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(entry.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w850)),
+                    Text(
+                      entry.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
                     const SizedBox(height: 5),
                     Text(
                       folderCount == 0 && materialCount == 0
                           ? 'Empty • ready to organize'
-                          : '$folderCount folders • $materialCount here • $totalMaterials total',
+                          : '$folderCount folders • $materialCount here • '
+                              '$totalMaterials total',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
-              IconButton(onPressed: onMenu, icon: const Icon(Icons.more_horiz_rounded)),
+              IconButton(
+                onPressed: onMenu,
+                icon: const Icon(Icons.more_horiz_rounded),
+              ),
             ],
           ),
         ),
@@ -429,8 +587,11 @@ class _MaterialCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return Card(
-      color: selected ? scheme.primaryContainer.withValues(alpha: 0.6) : null,
+      color: selected
+          ? scheme.primaryContainer.withValues(alpha: 0.6)
+          : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
@@ -442,18 +603,41 @@ class _MaterialCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  FileIcon(entry: entry, large: true, heroTag: 'entry:${entry.path}'),
+                  FileIcon(
+                    entry: entry,
+                    large: true,
+                    heroTag: 'entry:${entry.path}',
+                  ),
                   const Spacer(),
                   if (selectionActive)
-                    Checkbox(value: selected, onChanged: (_) => onTap())
+                    Checkbox(
+                      value: selected,
+                      onChanged: (_) => onTap(),
+                    )
                   else
-                    IconButton(onPressed: onMenu, icon: const Icon(Icons.more_horiz_rounded)),
+                    IconButton(
+                      onPressed: onMenu,
+                      icon: const Icon(Icons.more_horiz_rounded),
+                    ),
                 ],
               ),
               const Spacer(),
-              Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+              Text(
+                entry.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
               const SizedBox(height: 4),
-              Text(fileMeta(entry), maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+              Text(
+                fileMeta(entry),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
+              ),
             ],
           ),
         ),
@@ -464,6 +648,7 @@ class _MaterialCard extends StatelessWidget {
 
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel({required this.title, required this.icon});
+
   final String title;
   final IconData icon;
 
@@ -473,14 +658,26 @@ class _SectionLabel extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
-        Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w850)),
+        Text(
+          title,
+          style: Theme.of(context)
+              .textTheme
+              .titleSmall
+              ?.copyWith(fontWeight: FontWeight.w800),
+        ),
       ],
     );
   }
 }
 
 class _SelectionHeader extends StatelessWidget {
-  const _SelectionHeader({super.key, required this.count, required this.onClose, required this.onSelectAll});
+  const _SelectionHeader({
+    super.key,
+    required this.count,
+    required this.onClose,
+    required this.onSelectAll,
+  });
+
   final int count;
   final VoidCallback onClose;
   final VoidCallback onSelectAll;
@@ -491,9 +688,17 @@ class _SelectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       child: Row(
         children: [
-          IconButton(onPressed: onClose, icon: const Icon(Icons.close_rounded)),
+          IconButton(
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded),
+          ),
           const SizedBox(width: 6),
-          Expanded(child: Text('$count selected', style: Theme.of(context).textTheme.titleLarge)),
+          Expanded(
+            child: Text(
+              '$count selected',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
           TextButton(onPressed: onSelectAll, child: const Text('Select all')),
         ],
       ),
@@ -503,11 +708,16 @@ class _SelectionHeader extends StatelessWidget {
 
 class _Breadcrumbs extends StatelessWidget {
   const _Breadcrumbs({required this.controller});
+
   final LibraryController controller;
 
   @override
   Widget build(BuildContext context) {
-    final pieces = controller.currentPath.split('/').where((part) => part.isNotEmpty).toList();
+    final pieces = controller.currentPath
+        .split('/')
+        .where((part) => part.isNotEmpty)
+        .toList();
+
     return SizedBox(
       height: 45,
       child: ListView(
@@ -526,7 +736,9 @@ class _Breadcrumbs extends StatelessWidget {
             ),
             ActionChip(
               label: Text(pieces[index]),
-              onPressed: () => controller.openFolder(pieces.take(index + 1).join('/')),
+              onPressed: () => controller.openFolder(
+                pieces.take(index + 1).join('/'),
+              ),
             ),
           ],
         ],
@@ -537,20 +749,29 @@ class _Breadcrumbs extends StatelessWidget {
 
 class _InboxGuide extends StatelessWidget {
   const _InboxGuide({required this.count, required this.onImport});
+
   final int count;
   final VoidCallback onImport;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 6, 14, 9),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [scheme.tertiary.withValues(alpha: 0.13), scheme.primary.withValues(alpha: 0.08)]),
+          gradient: LinearGradient(
+            colors: [
+              scheme.tertiary.withValues(alpha: 0.13),
+              scheme.primary.withValues(alpha: 0.08),
+            ],
+          ),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: scheme.tertiary.withValues(alpha: 0.18)),
+          border: Border.all(
+            color: scheme.tertiary.withValues(alpha: 0.18),
+          ),
         ),
         child: Row(
           children: [
@@ -560,13 +781,24 @@ class _InboxGuide extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Landing zone', style: TextStyle(fontWeight: FontWeight.w850)),
+                  const Text(
+                    'Landing zone',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   const SizedBox(height: 2),
-                  Text(count == 0 ? 'Share material here from other apps.' : 'Select items and move them into any nested study space.', style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    count == 0
+                        ? 'Share material here from other apps.'
+                        : 'Select items and move them into any nested study space.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),
-            IconButton.filledTonal(onPressed: onImport, icon: const Icon(Icons.add_rounded)),
+            IconButton.filledTonal(
+              onPressed: onImport,
+              icon: const Icon(Icons.add_rounded),
+            ),
           ],
         ),
       ),
@@ -576,6 +808,7 @@ class _InboxGuide extends StatelessWidget {
 
 class _EmptyFolder extends StatelessWidget {
   const _EmptyFolder({required this.onImport, required this.onStructure});
+
   final VoidCallback onImport;
   final VoidCallback onStructure;
 
@@ -589,19 +822,39 @@ class _EmptyFolder extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.account_tree_rounded, size: 54, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                Icons.account_tree_rounded,
+                size: 54,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(height: 14),
-              Text('Shape this folder your way', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                'Shape this folder your way',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 7),
-              const Text('Add material directly here, create another nested structure, or use a material type such as Notes, PYQs or Slides.', textAlign: TextAlign.center),
+              const Text(
+                'Add material directly here, create another nested structure, '
+                'or use a material type such as Notes, PYQs or Slides.',
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 18),
               Wrap(
                 spacing: 9,
                 runSpacing: 9,
                 alignment: WrapAlignment.center,
                 children: [
-                  FilledButton.icon(onPressed: onImport, icon: const Icon(Icons.add_rounded), label: const Text('Import material')),
-                  OutlinedButton.icon(onPressed: onStructure, icon: const Icon(Icons.account_tree_rounded), label: const Text('Add structure')),
+                  FilledButton.icon(
+                    onPressed: onImport,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Import material'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: onStructure,
+                    icon: const Icon(Icons.account_tree_rounded),
+                    label: const Text('Add structure'),
+                  ),
                 ],
               ),
             ],
@@ -613,7 +866,12 @@ class _EmptyFolder extends StatelessWidget {
 }
 
 class _BulkBar extends StatelessWidget {
-  const _BulkBar({required this.count, required this.onMove, required this.onDelete});
+  const _BulkBar({
+    required this.count,
+    required this.onMove,
+    required this.onDelete,
+  });
+
   final int count;
   final VoidCallback onMove;
   final VoidCallback onDelete;
@@ -621,6 +879,7 @@ class _BulkBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return SafeArea(
       top: false,
       child: Container(
@@ -629,18 +888,39 @@ class _BulkBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: scheme.inverseSurface,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 20, offset: Offset(0, 8))],
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            Expanded(child: Text('$count selected', style: TextStyle(color: scheme.onInverseSurface, fontWeight: FontWeight.w800))),
+            Expanded(
+              child: Text(
+                '$count selected',
+                style: TextStyle(
+                  color: scheme.onInverseSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
             TextButton.icon(
               onPressed: onMove,
               icon: const Icon(Icons.drive_file_move_outline),
               label: const Text('Move'),
-              style: TextButton.styleFrom(foregroundColor: scheme.onInverseSurface),
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.onInverseSurface,
+              ),
             ),
-            IconButton(tooltip: 'Delete selected', onPressed: onDelete, color: scheme.errorContainer, icon: const Icon(Icons.delete_outline_rounded)),
+            IconButton(
+              tooltip: 'Delete selected',
+              onPressed: onDelete,
+              color: scheme.errorContainer,
+              icon: const Icon(Icons.delete_outline_rounded),
+            ),
           ],
         ),
       ),
