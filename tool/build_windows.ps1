@@ -10,6 +10,7 @@ if (-not (Test-Path 'windows/CMakeLists.txt')) {
   flutter create --platforms=windows . | Out-Host
 }
 
+powershell -ExecutionPolicy Bypass -File .\tool\patch_windows_cmake.ps1 | Out-Host
 flutter pub get | Out-Host
 flutter analyze | Out-Host
 flutter test | Out-Host
