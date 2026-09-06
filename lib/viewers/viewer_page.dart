@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -23,12 +24,12 @@ Future<void> openStudyViewer(
 
   await Navigator.of(context).push(
     PageRouteBuilder<void>(
-      transitionDuration: const Duration(milliseconds: 360),
+      transitionDuration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 180),
       reverseTransitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (_, _, _) => StudyViewerPage(
-        controller: controller,
-        entry: entry,
-      ),
+      pageBuilder: (_, _, _) =>
+          StudyViewerPage(controller: controller, entry: entry),
       transitionsBuilder: (_, animation, _, child) {
         final curved = CurvedAnimation(
           parent: animation,
@@ -68,16 +69,39 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
   String? contentUri;
   Object? loadError;
   bool loading = true;
+  Timer? progressTimer;
+  int? pendingPosition;
+  int? savedPosition;
+
+  void _flushPosition() {
+    final value = pendingPosition;
+    if (value != null && value != savedPosition) {
+      savedPosition = value;
+      widget.controller.savePosition(widget.entry.path, value);
+    }
+  }
+
+  @override
+  void dispose() {
+    progressTimer?.cancel();
+    _flushPosition();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
     _prepare();
+    progressTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _flushPosition(),
+    );
   }
 
   Future<void> _prepare() async {
     try {
-      if (widget.entry.kind == LibraryKind.video) {
+      if (widget.entry.kind == LibraryKind.video ||
+          widget.entry.kind == LibraryKind.audio) {
         contentUri = await widget.controller.contentUri(widget.entry);
       } else if (widget.entry.canPreviewInApp) {
         localPath = await widget.controller.prepareForViewer(widget.entry);
@@ -85,7 +109,10 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
     } catch (error) {
       loadError = error;
     }
-    if (mounted) setState(() => loading = false);
+    if (mounted) {
+      setState(() => loading = false);
+      if (loadError == null) widget.controller.recordOpened(widget.entry);
+    }
   }
 
   @override
@@ -119,16 +146,12 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
                     widget.entry.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
+                    style: Theme.of(context).textTheme.titleMedium
                         ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                   Text(
                     fileMeta(widget.entry),
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
+                    style: Theme.of(context).textTheme.labelSmall
                         ?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ],
@@ -167,14 +190,13 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
         child: loading
             ? const _ViewerLoading()
             : loadError != null
-                ? _ViewerFallback(
-                    entry: widget.entry,
-                    message:
-                        'This material could not be prepared for the in-app viewer.',
-                    onExternal: () =>
-                        widget.controller.openExternally(widget.entry),
-                  )
-                : _viewerForEntry(),
+            ? _ViewerFallback(
+                entry: widget.entry,
+                message: 'This material could not be prepared for the in-app viewer.',
+                onExternal: () =>
+                    widget.controller.openExternally(widget.entry),
+              )
+            : _viewerForEntry(),
       ),
     );
   }
@@ -184,35 +206,46 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
     if (!entry.canPreviewInApp) {
       return _ViewerFallback(
         entry: entry,
-        message:
-            'This legacy or uncommon format is kept safely in your library, but needs another installed app to render it.',
+        message: 'This legacy or uncommon format is kept safely in your library, but needs another installed app to render it.',
         onExternal: () => widget.controller.openExternally(entry),
       );
     }
 
     return switch (entry.kind) {
-      LibraryKind.pdf => _PdfReader(path: localPath!),
+      LibraryKind.pdf => _PdfReader(
+        path: localPath!,
+        initialPage: widget.controller.positionFor(entry.path),
+        onPage: (value) => pendingPosition = value,
+      ),
       LibraryKind.note => _TextReader(
-          path: localPath!,
-          markdown: {'md', 'markdown'}.contains(entry.extension),
-        ),
+        path: localPath!,
+        markdown: {'md', 'markdown'}.contains(entry.extension),
+      ),
       LibraryKind.image => _ImageReader(path: localPath!),
-      LibraryKind.audio => _AudioReader(path: localPath!, entry: entry),
-      LibraryKind.video => _VideoReader(uri: contentUri!),
+      LibraryKind.audio => _AudioReader(
+        path: contentUri!,
+        entry: entry,
+        initialPosition: widget.controller.positionFor(entry.path),
+        onPosition: (value) => pendingPosition = value,
+      ),
+      LibraryKind.video => _VideoReader(
+        uri: contentUri!,
+        initialPosition: widget.controller.positionFor(entry.path),
+        onPosition: (value) => pendingPosition = value,
+      ),
       LibraryKind.book ||
       LibraryKind.slides ||
       LibraryKind.document ||
-      LibraryKind.spreadsheet =>
-        _PortableDocumentReader(
-          path: localPath!,
-          entry: entry,
-          onExternal: () => widget.controller.openExternally(entry),
-        ),
+      LibraryKind.spreadsheet => _PortableDocumentReader(
+        path: localPath!,
+        entry: entry,
+        onExternal: () => widget.controller.openExternally(entry),
+      ),
       _ => _ViewerFallback(
-          entry: entry,
-          message: 'There is no built-in reader for this format yet.',
-          onExternal: () => widget.controller.openExternally(entry),
-        ),
+        entry: entry,
+        message: 'There is no built-in reader for this format yet.',
+        onExternal: () => widget.controller.openExternally(entry),
+      ),
     };
   }
 }
@@ -242,20 +275,26 @@ class _ViewerLoading extends StatelessWidget {
 }
 
 class _PdfReader extends StatelessWidget {
-  const _PdfReader({required this.path});
-
+  const _PdfReader({
+    required this.path,
+    required this.initialPage,
+    required this.onPage,
+  });
   final String path;
+  final int initialPage;
+  final ValueChanged<int> onPage;
 
   @override
   Widget build(BuildContext context) {
     return PdfViewer.file(
       path,
       key: ValueKey(path),
-      params: const PdfViewerParams(
-        pageDropShadow: BoxShadow(
-          blurRadius: 8,
-          color: Color(0x22000000),
-        ),
+      initialPageNumber: initialPage < 1 ? 1 : initialPage,
+      params: PdfViewerParams(
+        onPageChanged: (page) {
+          if (page != null) onPage(page);
+        },
+        pageDropShadow: BoxShadow(blurRadius: 8, color: Color(0x22000000)),
       ),
     );
   }
@@ -296,9 +335,7 @@ class _TextReaderState extends State<_TextReader> {
                 constraints: const BoxConstraints(maxWidth: 820),
                 child: Text(
                   data,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge
+                  style: Theme.of(context).textTheme.bodyLarge
                       ?.copyWith(height: 1.65),
                 ),
               ),
@@ -335,7 +372,14 @@ class _ImageReader extends StatelessWidget {
 }
 
 class _AudioReader extends StatefulWidget {
-  const _AudioReader({required this.path, required this.entry});
+  const _AudioReader({
+    required this.path,
+    required this.entry,
+    required this.initialPosition,
+    required this.onPosition,
+  });
+  final int initialPosition;
+  final ValueChanged<int> onPosition;
 
   final String path;
   final LibraryEntry entry;
@@ -346,6 +390,8 @@ class _AudioReader extends StatefulWidget {
 
 class _AudioReaderState extends State<_AudioReader> {
   final AudioPlayer player = AudioPlayer();
+  StreamSubscription<Duration>? positionSubscription;
+  StreamSubscription<Duration?>? durationSubscription;
   Duration duration = Duration.zero;
   double speed = 1;
   Object? error;
@@ -358,7 +404,36 @@ class _AudioReaderState extends State<_AudioReader> {
 
   Future<void> _load() async {
     try {
-      duration = await player.setFilePath(widget.path) ?? Duration.zero;
+      durationSubscription = player.durationStream.listen((value) {
+        if (mounted && value != null) setState(() => duration = value);
+      });
+      final loaded = await player.setUrl(widget.path);
+      if (!mounted) return;
+      // Windows can finish loading before Media Foundation reports duration.
+      // Do not clamp a saved position against that temporary zero.
+      duration = loaded != null && loaded > Duration.zero
+          ? loaded
+          : await player.durationStream
+                    .firstWhere(
+                      (value) => value != null && value > Duration.zero,
+                    )
+                    .timeout(
+                      const Duration(seconds: 10),
+                      onTimeout: () => null,
+                    ) ??
+                Duration.zero;
+      if (!mounted) return;
+      await player.seek(
+        Duration(
+          milliseconds: duration > Duration.zero
+              ? widget.initialPosition.clamp(0, duration.inMilliseconds)
+              : widget.initialPosition,
+        ),
+      );
+      if (!mounted) return;
+      positionSubscription = player.positionStream.listen(
+        (position) => widget.onPosition(position.inMilliseconds),
+      );
       if (mounted) setState(() {});
     } catch (value) {
       error = value;
@@ -368,6 +443,8 @@ class _AudioReaderState extends State<_AudioReader> {
 
   @override
   void dispose() {
+    positionSubscription?.cancel();
+    durationSubscription?.cancel();
     player.dispose();
     super.dispose();
   }
@@ -395,10 +472,7 @@ class _AudioReaderState extends State<_AudioReader> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      scheme.primaryContainer,
-                      scheme.tertiaryContainer,
-                    ],
+                    colors: [scheme.primaryContainer, scheme.tertiaryContainer],
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -418,16 +492,15 @@ class _AudioReaderState extends State<_AudioReader> {
               Text(
                 widget.entry.name,
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
+                style: Theme.of(context).textTheme.titleLarge
                     ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 30),
               StreamBuilder<Duration>(
                 stream: player.positionStream,
+                initialData: player.position,
                 builder: (context, snapshot) {
-                  final position = snapshot.data ?? Duration.zero;
+                  final position = snapshot.data ?? player.position;
                   final maxMs = duration.inMilliseconds <= 0
                       ? 1
                       : duration.inMilliseconds;
@@ -440,9 +513,8 @@ class _AudioReaderState extends State<_AudioReader> {
                         min: 0,
                         max: maxMs.toDouble(),
                         value: value,
-                        onChanged: (value) => player.seek(
-                          Duration(milliseconds: value.round()),
-                        ),
+                        onChanged: (value) =>
+                            player.seek(Duration(milliseconds: value.round())),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -530,7 +602,13 @@ class _AudioReaderState extends State<_AudioReader> {
 }
 
 class _VideoReader extends StatefulWidget {
-  const _VideoReader({required this.uri});
+  const _VideoReader({
+    required this.uri,
+    required this.initialPosition,
+    required this.onPosition,
+  });
+  final int initialPosition;
+  final ValueChanged<int> onPosition;
 
   final String uri;
 
@@ -546,17 +624,34 @@ class _VideoReaderState extends State<_VideoReader> {
   @override
   void initState() {
     super.initState();
-    controller = VideoPlayerController.contentUri(Uri.parse(widget.uri));
-    controller.initialize().then((_) {
-      controller.addListener(_onPlayerChanged);
-      if (mounted) setState(() {});
-    }).catchError((Object value) {
-      error = value;
-      if (mounted) setState(() {});
-    });
+    final uri = Uri.parse(widget.uri);
+    controller = uri.scheme == 'file'
+        ? VideoPlayerController.file(File.fromUri(uri))
+        : VideoPlayerController.contentUri(uri);
+    controller
+        .initialize()
+        .then((_) async {
+          if (!mounted) return;
+          await controller.seekTo(
+            Duration(
+              milliseconds: widget.initialPosition.clamp(
+                0,
+                controller.value.duration.inMilliseconds,
+              ),
+            ),
+          );
+          if (!mounted) return;
+          controller.addListener(_onPlayerChanged);
+          if (mounted) setState(() {});
+        })
+        .catchError((Object value) {
+          error = value;
+          if (mounted) setState(() {});
+        });
   }
 
   void _onPlayerChanged() {
+    widget.onPosition(controller.value.position.inMilliseconds);
     if (mounted) setState(() {});
   }
 
@@ -682,8 +777,7 @@ class _VideoReaderState extends State<_VideoReader> {
                             ),
                             onSelected: controller.setPlaybackSpeed,
                             itemBuilder: (_) => [
-                              for (final speed
-                                  in [0.75, 1.0, 1.25, 1.5, 2.0])
+                              for (final speed in [0.75, 1.0, 1.25, 1.5, 2.0])
                                 PopupMenuItem(
                                   value: speed,
                                   child: Text('$speed×'),
@@ -739,8 +833,7 @@ class _PortableDocumentReaderState extends State<_PortableDocumentReader> {
             snapshot.data!.isEmpty) {
           return _ViewerFallback(
             entry: widget.entry,
-            message:
-                'The file is valid, but its readable content could not be extracted offline.',
+            message: 'The file is valid, but its readable content could not be extracted offline.',
             onExternal: widget.onExternal,
           );
         }
@@ -765,21 +858,16 @@ class _PortableDocumentReaderState extends State<_PortableDocumentReader> {
                         children: [
                           Text(
                             section.title,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   fontWeight: FontWeight.w800,
-                                  color:
-                                      Theme.of(context).colorScheme.primary,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             section.body,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
+                            style: Theme.of(context).textTheme.bodyLarge
                                 ?.copyWith(height: 1.55),
                           ),
                         ],
@@ -822,9 +910,7 @@ class _ViewerFallback extends StatelessWidget {
               const SizedBox(height: 18),
               Text(
                 'Still in your library',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
+                style: Theme.of(context).textTheme.titleLarge
                     ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
@@ -847,7 +933,5 @@ String _time(Duration value) {
   final hours = value.inHours;
   final minutes = value.inMinutes.remainder(60).toString().padLeft(2, '0');
   final seconds = value.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return hours > 0
-      ? '$hours:$minutes:$seconds'
-      : '${value.inMinutes}:$seconds';
+  return hours > 0 ? '$hours:$minutes:$seconds' : '${value.inMinutes}:$seconds';
 }
