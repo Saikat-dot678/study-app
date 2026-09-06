@@ -17,7 +17,13 @@ Study is an offline-first Flutter student library for Android and desktop. It ke
 - Offline readable views for EPUB and modern DOCX/PPTX/XLSX/OpenDocument files.
 - External-app fallback for legacy/uncommon formats.
 - Responsive mobile/tablet/desktop UI with a dedicated desktop sidebar, desktop command search and keyboard shortcuts.
-- Home dashboard, quick folders, continue-learning cards, library browser, global search and settings.
+- Study desk, pinned folders, continue studying, library browser, global search and settings.
+- A calmer study desk with **Starred**, pinned sidebar folders, and real opening history.
+- Shared import/bulk-filing dialog with recent destinations and optional contextual/custom categories.
+- Explorer file drops on Windows, Ctrl/Shift selection, Ctrl+A, and right-click actions.
+- Ctrl/Cmd+K command palette with keyboard navigation, quick creation, and file search.
+- PDF page and audio/video playback resume stored in portable optional metadata.
+- Word-based path search with optional `type:pdf`, `type:video`, and `is:starred` filters.
 - No account, server, telemetry or internet requirement for the library workflow.
 - Hidden `.studyapp/library.json` marker so a copied library folder is self-describing and reconnectable.
 
@@ -100,7 +106,9 @@ At widths of roughly 980px and above, Study switches to a desktop shell with:
 - command-style library search,
 - desktop add/refresh controls,
 - adaptive cards and file grids,
-- `Ctrl+K` / `Cmd+K` search,
+- `Ctrl+K` / `Cmd+K` command palette (Up/Down to navigate, Enter to open, Escape to close),
+- `Ctrl+A` select all, Ctrl-click toggle, Shift-click range selection, Escape clear selection,
+- `Alt+Up` parent folder and `Ctrl+Shift+N` new folder in the library,
 - `Alt+1`, `Alt+2`, `Alt+3` navigation shortcuts.
 
 Below that breakpoint it returns to the compact touch-first navigation used on phones and tablets.
@@ -115,3 +123,7 @@ Pull requests validate both surfaces:
 ## Privacy
 
 Study has no backend requirement. Your study files remain in the folder you choose. Reader/player preparation may use temporary local cache files when a platform API requires them; originals remain inside your portable library folder.
+
+Favorites, recent destinations and reading positions are optional relative-path metadata under `.studyapp/`. Copy that directory with your library to retain them. In-app moves and renames update the references. Files renamed outside Study remain accessible after rescan, but their old metadata cannot always be matched automatically.
+
+See [the workspace review](docs/WORKSPACE_REVIEW.md) for research, architecture decisions and limitations, and [verification](docs/VERIFICATION.md) for build/test results. Folder drops, clipboard file objects, tags, collections, and EPUB scroll resume are not implemented.
