@@ -357,10 +357,11 @@ class StorageBridge {
   }
 
   Future<void> _prepareDesktopRoot(Directory root) async {
-    for (final name in const ['Inbox', 'Notes', 'Books', 'Slides', 'Recordings', 'Videos']) {
-      final folder = Directory(p.join(root.path, name));
-      if (!await folder.exists()) await folder.create(recursive: true);
-    }
+    // Inbox is the only reserved user-visible folder. Everything else is
+    // intentionally user-defined so Semester/GATE/Project structures can live
+    // naturally at the root without duplicate global type buckets.
+    final inbox = Directory(p.join(root.path, 'Inbox'));
+    if (!await inbox.exists()) await inbox.create(recursive: true);
     final appDir = Directory(p.join(root.path, '.studyapp'));
     if (!await appDir.exists()) await appDir.create(recursive: true);
     final marker = File(p.join(appDir.path, 'library.json'));
@@ -386,11 +387,9 @@ class StorageBridge {
     return p.joinAll([root.path, ...relative.split('/').where((part) => part.isNotEmpty)]);
   }
 
-  String _joinRelative(String parent, String child) =>
-      parent.isEmpty ? child : '$parent/$child';
+  String _joinRelative(String parent, String child) => parent.isEmpty ? child : '$parent/$child';
 
-  String _sanitizeName(String value) =>
-      value.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_').trim();
+  String _sanitizeName(String value) => value.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_').trim();
 
   Future<File> _uniqueDestination(Directory folder, String desired) async {
     final target = await _uniqueEntityPath(folder, _sanitizeName(desired));
