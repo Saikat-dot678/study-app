@@ -14,8 +14,10 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Locale
+import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
+    private val storageWorker = Executors.newSingleThreadExecutor()
     private val channelName = "study.app/storage"
     private val requestTree = 7001
     private val requestFiles = 7002
@@ -27,44 +29,56 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        handleShareIntent(intent)
+        storageWorker.execute { handleShareIntent(intent) }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).also { methodChannel ->
             methodChannel.setMethodCallHandler { call, result ->
-                try {
-                    when (call.method) {
-                        "getLibraryState" -> result.success(libraryState())
-                        "pickLibraryFolder" -> pickLibraryFolder(result)
-                        "forgetLibrary" -> {
-                            prefs.edit().remove("tree_uri").apply()
-                            result.success(null)
+                val work = Runnable {
+                    try {
+                        when (call.method) {
+                            "readMetadata" -> result.success(readMetadata())
+                            "writeMetadata" -> {
+                                writeMetadata(call.argument<String>("json") ?: "", call.argument<Int>("slot") ?: 0)
+                                result.success(null)
+                            }
+                            "getLibraryState" -> result.success(libraryState())
+                            "pickLibraryFolder" -> pickLibraryFolder(result)
+                            "forgetLibrary" -> {
+                                prefs.edit().remove("tree_uri").apply()
+                                result.success(null)
+                            }
+                            "listEntries" -> result.success(listEntries(call.argument<String>("path") ?: ""))
+                            "searchEntries" -> result.success(searchEntries(call.argument<String>("query") ?: ""))
+                            "pickAndImportFiles" -> pickAndImportFiles(call.argument<String>("destination") ?: "", result)
+                            "createFolder" -> result.success(createFolder(call.argument<String>("parent") ?: "", call.argument<String>("name") ?: ""))
+                            "createNote" -> result.success(createNote(call.argument<String>("parent") ?: "", call.argument<String>("title") ?: "Untitled note", call.argument<String>("body") ?: ""))
+                            "renameEntry" -> result.success(renameEntry(call.argument<String>("path") ?: "", call.argument<String>("name") ?: ""))
+                            "moveEntry" -> result.success(moveEntry(call.argument<String>("source") ?: "", call.argument<String>("destination") ?: ""))
+                            "deleteEntry" -> {
+                                val path = call.argument<String>("path") ?: ""
+                                result.success(path.isNotBlank() && path != ".studyapp" && !path.startsWith(".studyapp/") && (resolve(path)?.delete() ?: false))
+                            }
+                            "entryUri" -> result.success(entryUri(call.argument<String>("path") ?: ""))
+                            "prepareEntry" -> result.success(prepareEntry(call.argument<String>("path") ?: ""))
+                            "openEntry" -> {
+                                openEntry(call.argument<String>("path") ?: "")
+                                result.success(null)
+                            }
+                            "shareEntry" -> {
+                                shareEntry(call.argument<String>("path") ?: "")
+                                result.success(null)
+                            }
+                            else -> result.notImplemented()
                         }
-                        "listEntries" -> result.success(listEntries(call.argument<String>("path") ?: ""))
-                        "searchEntries" -> result.success(searchEntries(call.argument<String>("query") ?: ""))
-                        "pickAndImportFiles" -> pickAndImportFiles(call.argument<String>("destination") ?: "", result)
-                        "createFolder" -> result.success(createFolder(call.argument<String>("parent") ?: "", call.argument<String>("name") ?: ""))
-                        "createNote" -> result.success(createNote(call.argument<String>("parent") ?: "", call.argument<String>("title") ?: "Untitled note", call.argument<String>("body") ?: ""))
-                        "renameEntry" -> result.success(renameEntry(call.argument<String>("path") ?: "", call.argument<String>("name") ?: ""))
-                        "moveEntry" -> result.success(moveEntry(call.argument<String>("source") ?: "", call.argument<String>("destination") ?: ""))
-                        "deleteEntry" -> result.success(resolve(call.argument<String>("path") ?: "")?.delete() ?: false)
-                        "entryUri" -> result.success(entryUri(call.argument<String>("path") ?: ""))
-                        "prepareEntry" -> result.success(prepareEntry(call.argument<String>("path") ?: ""))
-                        "openEntry" -> {
-                            openEntry(call.argument<String>("path") ?: "")
-                            result.success(null)
-                        }
-                        "shareEntry" -> {
-                            shareEntry(call.argument<String>("path") ?: "")
-                            result.success(null)
-                        }
-                        else -> result.notImplemented()
+                    } catch (error: Exception) {
+                        result.error("storage_error", error.message ?: "Storage operation failed", null)
                     }
-                } catch (error: Exception) {
-                    result.error("storage_error", error.message ?: "Storage operation failed", null)
                 }
+                if (call.method in setOf("pickLibraryFolder", "pickAndImportFiles", "openEntry", "shareEntry")) work.run()
+                else storageWorker.execute(work)
             }
         }
     }
@@ -72,7 +86,12 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleShareIntent(intent)
+        storageWorker.execute { handleShareIntent(intent) }
+    }
+
+    override fun onDestroy() {
+        storageWorker.shutdown()
+        super.onDestroy()
     }
 
     @Deprecated("Deprecated in Android API; FlutterActivity still forwards activity results through this method.")
@@ -110,10 +129,14 @@ class MainActivity : FlutterActivity() {
         } catch (_: SecurityException) {
         }
         prefs.edit().putString("tree_uri", uri.toString()).apply()
-        prepareRoot()
-        val flushed = flushPendingShares()
-        if (flushed.isNotEmpty()) notifyShared(flushed)
-        result.success(libraryState())
+        storageWorker.execute {
+            try {
+                prepareRoot()
+                val flushed = flushPendingShares()
+                if (flushed.isNotEmpty()) notifyShared(flushed)
+                result.success(libraryState())
+            } catch (error: Exception) { result.error("storage_error", error.message, null) }
+        }
     }
 
     private fun pickAndImportFiles(destination: String, result: MethodChannel.Result) {
@@ -148,13 +171,38 @@ class MainActivity : FlutterActivity() {
         data.clipData?.let { clip ->
             for (index in 0 until clip.itemCount) uris.add(clip.getItemAt(index).uri)
         }
-        val target = resolveFolder(pendingImportDestination) ?: root()
-        if (target == null) {
-            result.error("no_destination", "Destination folder is unavailable", null)
-            return
+        val destination = pendingImportDestination
+        storageWorker.execute {
+            try {
+                val target = resolveFolder(destination)
+                    ?: throw IllegalStateException("Destination folder is unavailable")
+                val imported = uris.distinct().mapNotNull { copyUriInto(it, target) }
+                if (imported.size != uris.distinct().size) {
+                    result.error("partial_import", "Imported ${imported.size} of ${uris.distinct().size} files. Check access to the remaining files.", null)
+                } else result.success(imported)
+            } catch (error: Exception) { result.error("storage_error", error.message, null) }
         }
-        val imported = uris.mapNotNull { copyUriInto(it, target) }
-        result.success(imported)
+    }
+
+    private fun readMetadata(): List<String> {
+        val folder = root()?.findFile(".studyapp") ?: return emptyList()
+        return (0..1).mapNotNull { slot ->
+            folder.findFile("workspace-$slot.json")?.let { file ->
+                contentResolver.openInputStream(file.uri)?.bufferedReader()?.use { it.readText() }
+                    ?: throw IllegalStateException("Cannot read metadata")
+            }
+        }
+    }
+
+    private fun writeMetadata(json: String, slot: Int) {
+        require(slot in 0..1)
+        val root = root() ?: throw IllegalStateException("Library unavailable")
+        val folder = root.findFile(".studyapp") ?: root.createDirectory(".studyapp")
+            ?: throw IllegalStateException("Cannot create metadata folder")
+        val file = folder.findFile("workspace-$slot.json") ?: folder.createFile("application/json", "workspace-$slot.json")
+            ?: throw IllegalStateException("Cannot create metadata")
+        (contentResolver.openOutputStream(file.uri, "wt") ?: throw IllegalStateException("Cannot save metadata"))
+            .bufferedWriter().use { it.write(json) }
     }
 
     private fun libraryState(): Map<String, Any?> {
@@ -178,7 +226,7 @@ class MainActivity : FlutterActivity() {
 
     private fun prepareRoot() {
         val root = root() ?: return
-        listOf("Inbox", "Notes", "Books", "Slides", "Recordings", "Videos").forEach { name ->
+        listOf("Inbox").forEach { name ->
             if (root.findFile(name) == null) root.createDirectory(name)
         }
         val appDir = root.findFile(".studyapp") ?: root.createDirectory(".studyapp")
@@ -203,19 +251,18 @@ class MainActivity : FlutterActivity() {
         val root = root() ?: return emptyList()
         val normalized = query.trim().lowercase(Locale.getDefault())
         val results = mutableListOf<Map<String, Any?>>()
-        fun walk(folder: DocumentFile, parentPath: String) {
-            if (results.size >= 5000) return
-            folder.listFiles().forEach { child ->
+        val pending = java.util.ArrayDeque<Pair<DocumentFile, String>>()
+        pending.add(root to "")
+        while (pending.isNotEmpty()) {
+            val (folder, parentPath) = pending.removeFirst()
+            for (child in folder.listFiles()) {
                 val name = child.name ?: "Untitled"
-                if (name == ".studyapp") return@forEach
+                if (name == ".studyapp") continue
                 val path = joinPath(parentPath, name)
-                if (normalized.isEmpty() || name.lowercase(Locale.getDefault()).contains(normalized) || path.lowercase(Locale.getDefault()).contains(normalized)) {
-                    results.add(entryMap(child, path))
-                }
-                if (child.isDirectory) walk(child, path)
+                if (normalized.isEmpty() || path.lowercase(Locale.ROOT).contains(normalized)) results.add(entryMap(child, path))
+                if (child.isDirectory) pending.add(child to path)
             }
         }
-        walk(root, "")
         return results
     }
 
@@ -230,6 +277,7 @@ class MainActivity : FlutterActivity() {
 
     private fun resolve(path: String): DocumentFile? {
         if (path.isBlank()) return root()
+        require(path.split('/').none { it == "." || it == ".." || it.contains('\\') }) { "Invalid library path" }
         var current = root() ?: return null
         for (part in splitPath(path)) {
             current = current.findFile(part) ?: return null
@@ -261,8 +309,11 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun renameEntry(path: String, name: String): Boolean {
+        if (path.isBlank() || path == ".studyapp" || path.startsWith(".studyapp/")) return false
         val file = resolve(path) ?: return false
         val clean = sanitizeName(name)
+        val parent = resolveFolder(path.substringBeforeLast('/', "")) ?: return false
+        if (parent.findFile(clean) != null) return false
         if (clean.isBlank()) return false
         return file.renameTo(clean)
     }
@@ -272,6 +323,8 @@ class MainActivity : FlutterActivity() {
         if (destinationPath == sourcePath || destinationPath.startsWith("$sourcePath/")) return false
         val source = resolve(sourcePath) ?: return false
         val destination = resolveFolder(destinationPath) ?: return false
+        if (sourcePath.substringBeforeLast('/', "") == destinationPath) return true
+        if (destination.findFile(source.name ?: "") != null) return false
         val copied = copyDocument(source, destination)
         return copied && source.delete()
     }
@@ -282,15 +335,18 @@ class MainActivity : FlutterActivity() {
         if (source.isDirectory) {
             val newFolder = destination.createDirectory(name) ?: return false
             for (child in source.listFiles()) {
-                if (!copyDocument(child, newFolder)) return false
+                if (!copyDocument(child, newFolder)) {
+                    newFolder.delete()
+                    return false
+                }
             }
             return true
         }
         val target = destination.createFile(source.type ?: "application/octet-stream", name) ?: return false
         return try {
-            val input = contentResolver.openInputStream(source.uri) ?: return false
-            val output = contentResolver.openOutputStream(target.uri, "w") ?: return false
-            input.use { sourceStream -> output.use { targetStream -> sourceStream.copyTo(targetStream) } }
+            (contentResolver.openInputStream(source.uri) ?: throw IllegalStateException("Cannot read source")).use { input ->
+                (contentResolver.openOutputStream(target.uri, "w") ?: throw IllegalStateException("Cannot write destination")).use { output -> input.copyTo(output) }
+            }
             true
         } catch (_: Exception) {
             target.delete()
@@ -313,11 +369,13 @@ class MainActivity : FlutterActivity() {
         previewDir.listFiles()?.filter { it.lastModified() < staleBefore }?.forEach { it.delete() }
 
         val cleanName = sanitizeName(file.name ?: "preview").ifBlank { "preview" }
-        val cacheFile = File(previewDir, "${path.hashCode()}_$cleanName")
+        val cacheKey = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(file.uri.toString().toByteArray()).joinToString("") { "%02x".format(it) }
+        val cacheFile = File(previewDir, "${cacheKey}_$cleanName")
         val sourceModified = file.lastModified()
         val cacheIsFresh = cacheFile.exists() &&
             cacheFile.length() == file.length() &&
-            (sourceModified <= 0L || cacheFile.lastModified() >= sourceModified)
+            (sourceModified > 0L && cacheFile.lastModified() >= sourceModified)
 
         if (!cacheIsFresh) {
             try {
@@ -360,16 +418,19 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun copyUriInto(sourceUri: Uri, destination: DocumentFile): String? {
+        var target: DocumentFile? = null
         return try {
             val displayName = queryDisplayName(sourceUri) ?: "Imported file"
             val name = uniqueName(destination, sanitizeName(displayName).ifBlank { "Imported file" })
             val mime = contentResolver.getType(sourceUri) ?: guessMime(name)
-            val target = destination.createFile(mime, name) ?: return null
-            val input = contentResolver.openInputStream(sourceUri) ?: return null
-            val output = contentResolver.openOutputStream(target.uri, "w") ?: return null
-            input.use { source -> output.use { sink -> source.copyTo(sink) } }
-            target.name ?: name
+            val outputFile = destination.createFile(mime, name) ?: return null
+            target = outputFile
+            (contentResolver.openInputStream(sourceUri) ?: throw IllegalStateException("Cannot read source")).use { input ->
+                (contentResolver.openOutputStream(outputFile.uri, "w") ?: throw IllegalStateException("Cannot write destination")).use { output -> input.copyTo(output) }
+            }
+            outputFile.name ?: name
         } catch (_: Exception) {
+            target?.delete()
             null
         }
     }
@@ -439,14 +500,17 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun stageSharedUri(uri: Uri): String? {
+        var pending: File? = null
         return try {
             val displayName = sanitizeName(queryDisplayName(uri) ?: "Shared file").ifBlank { "Shared file" }
-            val pending = File(pendingShareDir(), "${System.currentTimeMillis()}_$displayName")
-            contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(pending).use { output -> input.copyTo(output) }
-            } ?: return null
+            val outputFile = File(pendingShareDir(), "${java.util.UUID.randomUUID()}_$displayName")
+            pending = outputFile
+            (contentResolver.openInputStream(uri) ?: throw IllegalStateException("Cannot read shared file")).use { input ->
+                FileOutputStream(outputFile).use { output -> input.copyTo(output) }
+            }
             displayName
         } catch (_: Exception) {
+            pending?.delete()
             null
         }
     }
@@ -464,7 +528,7 @@ class MainActivity : FlutterActivity() {
             if (target != null) {
                 try {
                     FileInputStream(file).use { input ->
-                        contentResolver.openOutputStream(target.uri, "w")?.use { output -> input.copyTo(output) }
+                        (contentResolver.openOutputStream(target.uri, "w") ?: throw IllegalStateException("Could not write shared file")).use { output -> input.copyTo(output) }
                     }
                     file.delete()
                     names.add(target.name ?: name)
@@ -488,7 +552,6 @@ class MainActivity : FlutterActivity() {
 
     private fun splitPath(path: String): List<String> = path
         .split('/')
-        .map { it.trim() }
         .filter { it.isNotEmpty() && it != "." && it != ".." }
 
     private fun joinPath(parent: String, child: String): String = if (parent.isBlank()) child else "$parent/$child"

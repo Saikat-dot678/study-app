@@ -34,13 +34,72 @@ class StorageBridge {
   Future<void> Function(List<String> names)? onShareReceived;
 
   bool get supported =>
-      Platform.isAndroid || Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      Platform.isAndroid ||
+      Platform.isWindows ||
+      Platform.isLinux ||
+      Platform.isMacOS;
 
-  bool get isDesktop => Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  bool get isDesktop =>
+      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+
+  Future<List<String>> readMetadata() async {
+    if (!isDesktop) {
+      return await _channel.invokeListMethod<String>('readMetadata') ?? [];
+    }
+    final root = await _desktopRoot();
+    if (root == null) return [];
+    final values = <String>[];
+    for (var slot = 0; slot < 2; slot++) {
+      final file = File(
+        await _absolute(root, '.studyapp/workspace-$slot.json'),
+      );
+      if (await file.exists()) values.add(await file.readAsString());
+    }
+    return values;
+  }
+
+  /// Alternating snapshots retain the previous state if a provider interrupts a write.
+  Future<void> writeMetadata(String json, int revision) async {
+    final slot = revision % 2;
+    if (!isDesktop) {
+      await _channel.invokeMethod<void>('writeMetadata', {
+        'json': json,
+        'slot': slot,
+      });
+      return;
+    }
+    final root = await _desktopRoot();
+    if (root == null) throw StateError('Library is unavailable.');
+    final file = File(await _absolute(root, '.studyapp/workspace-$slot.json'));
+    await file.parent.create(recursive: true);
+    final temp = File('${file.path}.tmp');
+    await temp.writeAsString(json, flush: true);
+    await temp.rename(file.path);
+  }
+
+  static String validateName(String name) {
+    final value = name.trim();
+    if (value.isEmpty ||
+        value == '.' ||
+        value == '..' ||
+        value.toLowerCase() == '.studyapp' ||
+        value.endsWith('.') ||
+        RegExp(r'[\\/:*?"<>|\x00-\x1F]').hasMatch(value) ||
+        RegExp(
+          r'^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)',
+          caseSensitive: false,
+        ).hasMatch(value)) {
+      throw StateError(
+        'Use a portable name without slashes, reserved names or trailing dots.',
+      );
+    }
+    return value;
+  }
 
   Future<dynamic> _handleNativeCall(MethodCall call) async {
     if (call.method == 'shareReceived') {
-      final values = (call.arguments as List?)?.cast<String>() ?? const <String>[];
+      final values =
+          (call.arguments as List?)?.cast<String>() ?? const <String>[];
       await onShareReceived?.call(values);
     }
   }
@@ -48,7 +107,9 @@ class StorageBridge {
   Future<LibraryState> getState() async {
     if (!supported) return const LibraryState(connected: false);
     if (isDesktop) return _desktopState();
-    final raw = await _channel.invokeMapMethod<String, dynamic>('getLibraryState');
+    final raw = await _channel.invokeMapMethod<String, dynamic>(
+      'getLibraryState',
+    );
     return LibraryState(
       connected: raw?['connected'] as bool? ?? false,
       name: raw?['name'] as String?,
@@ -70,7 +131,9 @@ class StorageBridge {
       await _prepareDesktopRoot(root);
       return _desktopState();
     }
-    final raw = await _channel.invokeMapMethod<String, dynamic>('pickLibraryFolder');
+    final raw = await _channel.invokeMapMethod<String, dynamic>(
+      'pickLibraryFolder',
+    );
     if (raw == null) return getState();
     return LibraryState(
       connected: raw['connected'] as bool? ?? false,
@@ -94,23 +157,27 @@ class StorageBridge {
     if (isDesktop) {
       final root = await _desktopRoot();
       if (root == null) return const [];
-      final folder = Directory(_absolute(root, path));
+      final folder = Directory(await _absolute(root, path));
       if (!await folder.exists()) return const [];
       final values = <LibraryEntry>[];
       await for (final entity in folder.list(followLinks: false)) {
+        if (entity is Link) continue;
         final name = p.basename(entity.path);
         if (name == '.studyapp') continue;
         values.add(await _desktopEntry(entity, _joinRelative(path, name)));
       }
       return values;
     }
-    final raw = await _channel.invokeListMethod<dynamic>(
-          'listEntries',
-          {'path': path},
-        ) ??
+    final raw =
+        await _channel.invokeListMethod<dynamic>('listEntries', {
+          'path': path,
+        }) ??
         const [];
     return raw
-        .map((item) => LibraryEntry.fromMap(Map<String, dynamic>.from(item as Map)))
+        .map(
+          (item) =>
+              LibraryEntry.fromMap(Map<String, dynamic>.from(item as Map)),
+        )
         .toList();
   }
 
@@ -121,10 +188,17 @@ class StorageBridge {
       if (root == null) return const [];
       final normalized = query.trim().toLowerCase();
       final results = <LibraryEntry>[];
-      await for (final entity in root.list(recursive: true, followLinks: false)) {
-        if (results.length >= 5000) break;
-        final relative = p.relative(entity.path, from: root.path).replaceAll('\\', '/');
-        if (relative == '.studyapp' || relative.startsWith('.studyapp/')) continue;
+      await for (final entity in root.list(
+        recursive: true,
+        followLinks: false,
+      )) {
+        final relative = p
+            .relative(entity.path, from: root.path)
+            .replaceAll('\\', '/');
+        if (relative == '.studyapp' || relative.startsWith('.studyapp/')) {
+          continue;
+        }
+        if (entity is Link) continue;
         final name = p.basename(entity.path);
         if (normalized.isEmpty ||
             name.toLowerCase().contains(normalized) ||
@@ -134,62 +208,90 @@ class StorageBridge {
       }
       return results;
     }
-    final raw = await _channel.invokeListMethod<dynamic>(
-          'searchEntries',
-          {'query': query},
-        ) ??
+    final raw =
+        await _channel.invokeListMethod<dynamic>('searchEntries', {
+          'query': query,
+        }) ??
         const [];
     return raw
-        .map((item) => LibraryEntry.fromMap(Map<String, dynamic>.from(item as Map)))
+        .map(
+          (item) =>
+              LibraryEntry.fromMap(Map<String, dynamic>.from(item as Map)),
+        )
         .toList();
   }
 
   Future<List<String>> importFiles(String destination) async {
     if (!supported) return const [];
     if (isDesktop) {
-      final root = await _desktopRoot();
-      if (root == null) throw StateError('Choose a library folder first.');
       final selected = await FilePicker.pickFiles(
         dialogTitle: 'Add materials to Study',
       );
-      if (selected.isEmpty) return const [];
-      final target = Directory(_absolute(root, destination));
-      if (!await target.exists()) await target.create(recursive: true);
-      final imported = <String>[];
-      for (final picked in selected) {
-        final sourcePath = picked.path;
-        if (sourcePath == null || sourcePath.isEmpty) continue;
-        final source = File(sourcePath);
-        if (!await source.exists()) continue;
-        final output = await _uniqueDestination(target, picked.name);
-        await source.copy(output.path);
-        imported.add(p.basename(output.path));
-      }
-      return imported;
+      return importPaths(
+        selected.map((file) => file.path).whereType<String>().toList(),
+        destination,
+      );
     }
-    final raw = await _channel.invokeListMethod<String>(
-          'pickAndImportFiles',
-          {'destination': destination},
-        ) ??
+    final raw =
+        await _channel.invokeListMethod<String>('pickAndImportFiles', {
+          'destination': destination,
+        }) ??
         const [];
     return raw;
   }
 
+  Future<List<String>> importPaths(
+    List<String> paths,
+    String destination,
+  ) async {
+    if (!isDesktop) throw StateError('File drops are available on desktop.');
+    final root = await _desktopRoot();
+    if (root == null) throw StateError('Choose a library folder first.');
+    final target = Directory(await _absolute(root, destination));
+    if (!await target.exists()) {
+      throw StateError('Destination folder is unavailable.');
+    }
+    final imported = <String>[];
+    final failures = <String>[];
+    for (final path in paths.toSet()) {
+      File? output;
+      try {
+        if (await FileSystemEntity.type(path, followLinks: false) !=
+            FileSystemEntityType.file) {
+          throw StateError('Drop individual files, not folders or shortcuts.');
+        }
+        output = await _uniqueDestination(target, p.basename(path));
+        await File(path).copy(output.path);
+        imported.add(p.basename(output.path));
+      } catch (_) {
+        if (output != null && await output.exists()) await output.delete();
+        failures.add(p.basename(path));
+      }
+    }
+    if (failures.isNotEmpty) {
+      throw StateError(
+        'Imported ${imported.length} of ${paths.toSet().length}. Could not copy: ${failures.join(', ')}. Drop individual files and check permissions.',
+      );
+    }
+    return imported;
+  }
+
   Future<bool> createFolder(String parent, String name) async {
+    name = validateName(name);
     if (isDesktop) {
       final root = await _desktopRoot();
       if (root == null) return false;
       final clean = _sanitizeName(name);
       if (clean.isEmpty) return false;
-      final folder = Directory(p.join(_absolute(root, parent), clean));
+      final folder = Directory(p.join(await _absolute(root, parent), clean));
       if (await folder.exists()) return false;
       await folder.create(recursive: true);
       return true;
     }
-    return await _channel.invokeMethod<bool>(
-          'createFolder',
-          {'parent': parent, 'name': name},
-        ) ??
+    return await _channel.invokeMethod<bool>('createFolder', {
+          'parent': parent,
+          'name': name,
+        }) ??
         false;
   }
 
@@ -197,7 +299,7 @@ class StorageBridge {
     if (isDesktop) {
       final root = await _desktopRoot();
       if (root == null) return false;
-      final folder = Directory(_absolute(root, parent));
+      final folder = Directory(await _absolute(root, parent));
       if (!await folder.exists()) await folder.create(recursive: true);
       var name = _sanitizeName(title).trim();
       if (name.isEmpty) name = 'Untitled note';
@@ -207,22 +309,28 @@ class StorageBridge {
       await target.writeAsString('# $heading\n\n$body');
       return true;
     }
-    return await _channel.invokeMethod<bool>(
-          'createNote',
-          {'parent': parent, 'title': title, 'body': body},
-        ) ??
+    return await _channel.invokeMethod<bool>('createNote', {
+          'parent': parent,
+          'title': title,
+          'body': body,
+        }) ??
         false;
   }
 
   Future<bool> rename(String path, String name) async {
+    if (_protectedPath(path)) return false;
+    name = validateName(name);
     if (isDesktop) {
       final root = await _desktopRoot();
       if (root == null || path.isEmpty) return false;
       final clean = _sanitizeName(name);
       if (clean.isEmpty) return false;
-      final source = _absolute(root, path);
+      final source = await _absolute(root, path);
       final target = p.join(p.dirname(source), clean);
-      if (await FileSystemEntity.type(target) != FileSystemEntityType.notFound) return false;
+      if (await FileSystemEntity.type(target) !=
+          FileSystemEntityType.notFound) {
+        return false;
+      }
       final type = await FileSystemEntity.type(source, followLinks: false);
       if (type == FileSystemEntityType.directory) {
         await Directory(source).rename(target);
@@ -234,25 +342,41 @@ class StorageBridge {
       }
       return false;
     }
-    return await _channel.invokeMethod<bool>(
-          'renameEntry',
-          {'path': path, 'name': name},
-        ) ??
+    return await _channel.invokeMethod<bool>('renameEntry', {
+          'path': path,
+          'name': name,
+        }) ??
         false;
   }
 
   Future<bool> move(String source, String destination) async {
+    if (_protectedPath(source) ||
+        (destination.isNotEmpty && _protectedPath(destination))) {
+      return false;
+    }
+    final parent = source.contains('/')
+        ? source.substring(0, source.lastIndexOf('/'))
+        : '';
+    if (parent == destination) return true;
     if (isDesktop) {
       final root = await _desktopRoot();
       if (root == null || source.isEmpty) return false;
-      if (destination == source || destination.startsWith('$source/')) return false;
-      final from = _absolute(root, source);
-      final targetFolder = Directory(_absolute(root, destination));
+      if (destination == source || destination.startsWith('$source/')) {
+        return false;
+      }
+      final from = await _absolute(root, source);
+      final targetFolder = Directory(await _absolute(root, destination));
       if (!await targetFolder.exists()) return false;
       final type = await FileSystemEntity.type(from, followLinks: false);
       if (type == FileSystemEntityType.notFound) return false;
       final name = p.basename(from);
-      final target = await _uniqueEntityPath(targetFolder, name);
+      final target = p.join(targetFolder.path, name);
+      if (await FileSystemEntity.type(target, followLinks: false) !=
+          FileSystemEntityType.notFound) {
+        throw StateError(
+          'A file or folder named $name already exists at the destination. Rename it first.',
+        );
+      }
       if (type == FileSystemEntityType.directory) {
         await Directory(from).rename(target);
       } else if (type == FileSystemEntityType.file) {
@@ -262,18 +386,19 @@ class StorageBridge {
       }
       return true;
     }
-    return await _channel.invokeMethod<bool>(
-          'moveEntry',
-          {'source': source, 'destination': destination},
-        ) ??
+    return await _channel.invokeMethod<bool>('moveEntry', {
+          'source': source,
+          'destination': destination,
+        }) ??
         false;
   }
 
   Future<bool> delete(String path) async {
+    if (_protectedPath(path)) return false;
     if (isDesktop) {
       final root = await _desktopRoot();
       if (root == null || path.isEmpty) return false;
-      final absolute = _absolute(root, path);
+      final absolute = await _absolute(root, path);
       final type = await FileSystemEntity.type(absolute, followLinks: false);
       if (type == FileSystemEntityType.directory) {
         await Directory(absolute).delete(recursive: true);
@@ -285,18 +410,23 @@ class StorageBridge {
       }
       return false;
     }
-    return await _channel.invokeMethod<bool>('deleteEntry', {'path': path}) ?? false;
+    return await _channel.invokeMethod<bool>('deleteEntry', {'path': path}) ??
+        false;
   }
 
   Future<String> prepareEntry(String path) async {
     if (isDesktop) {
       final root = await _desktopRoot();
       if (root == null) throw StateError('Library folder is unavailable.');
-      final absolute = _absolute(root, path);
-      if (!await File(absolute).exists()) throw StateError('This file is unavailable.');
+      final absolute = await _absolute(root, path);
+      if (!await File(absolute).exists()) {
+        throw StateError('This file is unavailable.');
+      }
       return absolute;
     }
-    final value = await _channel.invokeMethod<String>('prepareEntry', {'path': path});
+    final value = await _channel.invokeMethod<String>('prepareEntry', {
+      'path': path,
+    });
     if (value == null || value.isEmpty) {
       throw StateError('Could not prepare this file for viewing.');
     }
@@ -308,7 +438,9 @@ class StorageBridge {
       final absolute = await prepareEntry(path);
       return Uri.file(absolute).toString();
     }
-    final value = await _channel.invokeMethod<String>('entryUri', {'path': path});
+    final value = await _channel.invokeMethod<String>('entryUri', {
+      'path': path,
+    });
     if (value == null || value.isEmpty) {
       throw StateError('Could not access this file.');
     }
@@ -319,7 +451,7 @@ class StorageBridge {
     if (isDesktop) {
       final absolute = await prepareEntry(path);
       if (Platform.isWindows) {
-        await Process.run('cmd', ['/c', 'start', '', absolute], runInShell: true);
+        await Process.start('explorer.exe', [absolute]);
       } else if (Platform.isMacOS) {
         await Process.run('open', [absolute]);
       } else {
@@ -370,7 +502,10 @@ class StorageBridge {
     }
   }
 
-  Future<LibraryEntry> _desktopEntry(FileSystemEntity entity, String relative) async {
+  Future<LibraryEntry> _desktopEntry(
+    FileSystemEntity entity,
+    String relative,
+  ) async {
     final stat = await entity.stat();
     return LibraryEntry.fromMap({
       'name': p.basename(entity.path),
@@ -382,14 +517,50 @@ class StorageBridge {
     });
   }
 
-  String _absolute(Directory root, String relative) {
+  Future<String> _absolute(Directory root, String relative) async {
     if (relative.trim().isEmpty) return root.path;
-    return p.joinAll([root.path, ...relative.split('/').where((part) => part.isNotEmpty)]);
+    final parts = relative.split('/');
+    if (parts.any(
+      (part) =>
+          part == '..' ||
+          part == '.' ||
+          part.contains('\\') ||
+          part.contains(':'),
+    )) {
+      throw StateError('Invalid library path.');
+    }
+    final absolute = p.normalize(p.joinAll([root.path, ...parts]));
+    if (!p.isWithin(root.path, absolute)) {
+      throw StateError('Path must stay inside the library.');
+    }
+    // Resolve the nearest existing ancestor before any read, copy or deletion.
+    // This also prevents a library junction/symlink from reaching outside the root.
+    var existing = absolute;
+    while (await FileSystemEntity.type(existing, followLinks: false) ==
+        FileSystemEntityType.notFound) {
+      existing = p.dirname(existing);
+    }
+    final resolvedRoot = await root.resolveSymbolicLinks();
+    final resolved = await File(existing).resolveSymbolicLinks();
+    if (!p.equals(resolvedRoot, resolved) &&
+        !p.isWithin(resolvedRoot, resolved)) {
+      throw StateError('Linked paths must stay inside the library.');
+    }
+    return absolute;
   }
 
-  String _joinRelative(String parent, String child) => parent.isEmpty ? child : '$parent/$child';
+  String _joinRelative(String parent, String child) =>
+      parent.isEmpty ? child : '$parent/$child';
 
-  String _sanitizeName(String value) => value.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_').trim();
+  bool _protectedPath(String path) {
+    final normalized = path.toLowerCase();
+    return normalized.isEmpty ||
+        normalized == '.studyapp' ||
+        normalized.startsWith('.studyapp/');
+  }
+
+  String _sanitizeName(String value) =>
+      value.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_').trim();
 
   Future<File> _uniqueDestination(Directory folder, String desired) async {
     final target = await _uniqueEntityPath(folder, _sanitizeName(desired));
@@ -399,7 +570,8 @@ class StorageBridge {
   Future<String> _uniqueEntityPath(Directory folder, String desired) async {
     final safe = desired.isEmpty ? 'Imported file' : desired;
     var candidate = p.join(folder.path, safe);
-    if (await FileSystemEntity.type(candidate) == FileSystemEntityType.notFound) {
+    if (await FileSystemEntity.type(candidate, followLinks: false) ==
+        FileSystemEntityType.notFound) {
       return candidate;
     }
     final extension = p.extension(safe);
@@ -407,7 +579,8 @@ class StorageBridge {
     var index = 2;
     while (true) {
       candidate = p.join(folder.path, '$base ($index)$extension');
-      if (await FileSystemEntity.type(candidate) == FileSystemEntityType.notFound) {
+      if (await FileSystemEntity.type(candidate, followLinks: false) ==
+          FileSystemEntityType.notFound) {
         return candidate;
       }
       index++;
