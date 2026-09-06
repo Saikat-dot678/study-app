@@ -23,9 +23,7 @@ class ConnectLibraryView extends StatelessWidget {
         Text(
           'Choose your study library folder',
           textAlign: TextAlign.center,
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
+          style: Theme.of(context).textTheme.headlineSmall
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
@@ -110,6 +108,7 @@ class FileRow extends StatelessWidget {
     this.showPath = false,
     this.trailing,
     this.selected = false,
+    this.heroEnabled = true,
   });
 
   final LibraryEntry entry;
@@ -118,18 +117,25 @@ class FileRow extends StatelessWidget {
   final bool showPath;
   final Widget? trailing;
   final bool selected;
+  final bool heroEnabled;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: selected ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.55) : null,
+    return Material(
+      borderRadius: BorderRadius.circular(10),
+      color: selected
+          ? Theme.of(context).colorScheme.primaryContainer
+                .withValues(alpha: 0.55)
+          : Colors.transparent,
       child: ListTile(
         onTap: onTap,
         onLongPress: onLongPress,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
         leading: FileIcon(
           entry: entry,
-          heroTag: entry.isDirectory ? null : 'entry:${entry.path}',
+          heroTag: entry.isDirectory || !heroEnabled
+              ? null
+              : 'entry:${entry.path}',
         ),
         title: Text(
           entry.name,
@@ -173,9 +179,7 @@ class EmptyCard extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
+              style: Theme.of(context).textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
@@ -201,9 +205,7 @@ class SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
+            style: Theme.of(context).textTheme.titleLarge
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
@@ -219,9 +221,11 @@ String fileMeta(LibraryEntry entry) {
   final size = bytes < 1024
       ? '$bytes B'
       : bytes < 1024 * 1024
-          ? '${(bytes / 1024).toStringAsFixed(1)} KB'
-          : bytes < 1024 * 1024 * 1024
-              ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
-              : '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  return entry.extension.isEmpty ? size : '${entry.extension.toUpperCase()} • $size';
+      ? '${(bytes / 1024).toStringAsFixed(1)} KB'
+      : bytes < 1024 * 1024 * 1024
+      ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
+      : '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  return entry.extension.isEmpty
+      ? size
+      : '${entry.extension.toUpperCase()} • $size';
 }

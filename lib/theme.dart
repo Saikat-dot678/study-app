@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static const _violet = Color(0xFF8B7CFF);
-  static const _cyan = Color(0xFF4DE3FF);
+  static const _cyan = Color(0xFF70CEDF);
   static const _pink = Color(0xFFFF78C8);
 
   static ThemeData get light {
@@ -32,9 +32,9 @@ class AppTheme {
       primary: _violet,
       secondary: _cyan,
       tertiary: _pink,
-      surface: const Color(0xFF070913),
+      surface: const Color(0xFF0D1018),
       surfaceContainerLowest: const Color(0xFF05060B),
-      surfaceContainerLow: const Color(0xFF0D1020),
+      surfaceContainerLow: const Color(0xFF151925),
       surfaceContainer: const Color(0xFF12162A),
       surfaceContainerHigh: const Color(0xFF191E36),
       surfaceContainerHighest: const Color(0xFF222842),
@@ -55,10 +55,22 @@ class AppTheme {
 
     return base.copyWith(
       textTheme: base.textTheme.copyWith(
-        headlineLarge: base.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -1.1),
-        headlineMedium: base.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.8),
-        headlineSmall: base.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
-        titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.25),
+        headlineLarge: base.textTheme.headlineLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -1.1,
+        ),
+        headlineMedium: base.textTheme.headlineMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.8,
+        ),
+        headlineSmall: base.textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
+        titleLarge: base.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.25,
+        ),
       ),
       appBarTheme: AppBarTheme(
         elevation: 0,
@@ -89,7 +101,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerLow.withValues(alpha: 0.92),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 17,
+          vertical: 15,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -109,11 +124,15 @@ class AppTheme {
         elevation: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         indicatorColor: scheme.primary.withValues(alpha: 0.16),
-        indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           return TextStyle(
             fontSize: 11.5,
-            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
           );
         }),
       ),
@@ -141,15 +160,19 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           side: BorderSide(color: outline),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
         ),
       ),
       dividerColor: outline,

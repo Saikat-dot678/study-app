@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/library_controller.dart';
 import '../models/library_entry.dart';
@@ -24,18 +25,11 @@ class _LibraryPageState extends State<LibraryPage> {
   LibraryController get controller => widget.controller;
   bool get selecting => selected.isNotEmpty;
 
-  static const _legacyRoots = {'Notes', 'Books', 'Slides', 'Recordings', 'Videos'};
+  String? selectionPath;
+  String? anchor;
 
   List<LibraryEntry> get visibleEntries {
-    final values = controller.entries.where((entry) {
-      if (controller.currentPath.isNotEmpty ||
-          !entry.isDirectory ||
-          !_legacyRoots.contains(entry.name)) {
-        return true;
-      }
-      return controller.materialCountUnder(entry.path) > 0 ||
-          controller.directFolderCount(entry.path) > 0;
-    }).toList();
+    final values = controller.entries.toList();
 
     int compareName(LibraryEntry a, LibraryEntry b) =>
         a.name.toLowerCase().compareTo(b.name.toLowerCase());
@@ -45,11 +39,13 @@ class _LibraryPageState extends State<LibraryPage> {
       return switch (sort) {
         _LibrarySort.name => compareName(a, b),
         _LibrarySort.newest =>
-          (b.lastModified?.millisecondsSinceEpoch ?? 0)
-              .compareTo(a.lastModified?.millisecondsSinceEpoch ?? 0),
-        _LibrarySort.type => a.kind.index == b.kind.index
-            ? compareName(a, b)
-            : a.kind.index.compareTo(b.kind.index),
+          (b.lastModified?.millisecondsSinceEpoch ?? 0).compareTo(
+            a.lastModified?.millisecondsSinceEpoch ?? 0,
+          ),
+        _LibrarySort.type =>
+          a.kind.index == b.kind.index
+              ? compareName(a, b)
+              : a.kind.index.compareTo(b.kind.index),
       };
     });
     return values;
@@ -69,6 +65,12 @@ class _LibraryPageState extends State<LibraryPage> {
       return ConnectLibraryView(controller: controller);
     }
 
+    if (selectionPath != controller.currentPath) {
+      selected.clear();
+      anchor = null;
+      selectionPath = controller.currentPath;
+    }
+    selected.retainAll(controller.entries.map((e) => e.path));
     final entries = visibleEntries;
     final folders = entries.where((entry) => entry.isDirectory).toList();
     final materials = entries.where((entry) => !entry.isDirectory).toList();
@@ -76,81 +78,124 @@ class _LibraryPageState extends State<LibraryPage> {
         ? 'Library'
         : controller.currentPath.split('/').last;
 
-    return Column(
-      children: [
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          child: selecting
-              ? _SelectionHeader(
-                  key: const ValueKey('selected'),
-                  count: selected.length,
-                  onClose: _clearSelection,
-                  onSelectAll: () => setState(
-                    () => selected.addAll(entries.map((entry) => entry.path)),
-                  ),
-                )
-              : _LibraryHeader(
-                  key: const ValueKey('normal'),
-                  title: title,
-                  controller: controller,
-                  sort: sort,
-                  onSort: (value) => setState(() => sort = value),
-                  onImport: () => showSmartImportSheet(
-                    context,
-                    controller,
-                    basePath: controller.currentPath,
-                  ),
-                  onStructure: () => showCreateSpaceSheet(
-                    context,
-                    controller,
-                    parent: controller.currentPath,
-                  ),
-                ),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyA, control: true): () =>
+            setState(() => selected.addAll(entries.map((e) => e.path))),
+        const SingleActivator(LogicalKeyboardKey.escape): _clearSelection,
+        const SingleActivator(LogicalKeyboardKey.arrowUp, alt: true):
+            controller.goUp,
+        const SingleActivator(
+          LogicalKeyboardKey.keyN,
+          control: true,
+          shift: true,
+        ): () => showNewFolderDialog(
+          context,
+          controller,
+          parent: controller.currentPath,
         ),
-        if (!selecting) _Breadcrumbs(controller: controller),
-        if (!selecting && controller.currentPath == 'Inbox')
-          _InboxGuide(
-            count: materials.length,
-            onImport: () => showSmartImportSheet(
-              context,
-              controller,
-              basePath: 'Inbox',
+      },
+      child: Focus(
+        autofocus: true,
+        child: Column(
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: selecting
+                  ? _SelectionHeader(
+                      key: const ValueKey('selected'),
+                      count: selected.length,
+                      onClose: _clearSelection,
+                      onSelectAll: () => setState(
+                        () =>
+                            selected.addAll(entries.map((entry) => entry.path)),
+                      ),
+                    )
+                  : _LibraryHeader(
+                      key: const ValueKey('normal'),
+                      title: title,
+                      controller: controller,
+                      sort: sort,
+                      onSort: (value) => setState(() => sort = value),
+                      onImport: () => showSmartImportSheet(
+                        context,
+                        controller,
+                        basePath: controller.currentPath,
+                      ),
+                      onStructure: () =>
+                          showAddSheet(context, controller, fromHome: false),
+                    ),
             ),
-          ),
-        Expanded(
-          child: entries.isEmpty
-              ? _EmptyFolder(
-                  onImport: () => showSmartImportSheet(
-                    context,
-                    controller,
-                    basePath: controller.currentPath,
-                  ),
-                  onStructure: () => showCreateSpaceSheet(
-                    context,
-                    controller,
-                    parent: controller.currentPath,
-                  ),
-                )
-              : _FolderCanvas(
-                  controller: controller,
-                  folders: folders,
-                  materials: materials,
-                  selected: selected,
-                  onTap: _handleTap,
-                  onLongPress: _toggle,
+            if (!selecting) _Breadcrumbs(controller: controller),
+            if (!selecting && controller.currentPath == 'Inbox')
+              _InboxGuide(
+                count: materials.length,
+                onImport: () => showSmartImportSheet(
+                  context,
+                  controller,
+                  basePath: 'Inbox',
                 ),
+              ),
+            Expanded(
+              child: entries.isEmpty
+                  ? _EmptyFolder(
+                      onImport: () => showSmartImportSheet(
+                        context,
+                        controller,
+                        basePath: controller.currentPath,
+                      ),
+                      onStructure: () => showCreateSpaceSheet(
+                        context,
+                        controller,
+                        parent: controller.currentPath,
+                      ),
+                    )
+                  : _FolderCanvas(
+                      controller: controller,
+                      folders: folders,
+                      materials: materials,
+                      selected: selected,
+                      onTap: _handleTap,
+                      onLongPress: _toggle,
+                    ),
+            ),
+            if (selecting)
+              _BulkBar(
+                count: selected.length,
+                onMove: _moveSelected,
+                onDelete: _deleteSelected,
+              ),
+          ],
         ),
-        if (selecting)
-          _BulkBar(
-            count: selected.length,
-            onMove: _moveSelected,
-            onDelete: _deleteSelected,
-          ),
-      ],
+      ),
     );
   }
 
   void _handleTap(LibraryEntry entry) {
+    final keys = HardwareKeyboard.instance;
+    if (keys.isShiftPressed && anchor != null) {
+      final values = visibleEntries;
+      final start = values.indexWhere((e) => e.path == anchor);
+      final end = values.indexOf(entry);
+      if (start >= 0 && end >= 0) {
+        setState(
+          () => selected.addAll(
+            values
+                .sublist(
+                  start < end ? start : end,
+                  (start > end ? start : end) + 1,
+                )
+                .map((e) => e.path),
+          ),
+        );
+      }
+      return;
+    }
+    anchor = entry.path;
+    if (keys.isControlPressed || keys.isMetaPressed) {
+      _toggle(entry);
+      return;
+    }
     if (selecting) {
       _toggle(entry);
       return;
@@ -205,7 +250,7 @@ class _LibraryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width > 760;
+    final wide = MediaQuery.sizeOf(context).width > 1200;
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
@@ -214,6 +259,7 @@ class _LibraryHeader extends StatelessWidget {
         children: [
           if (controller.currentPath.isNotEmpty)
             IconButton.filledTonal(
+              tooltip: 'Parent folder',
               onPressed: controller.goUp,
               icon: const Icon(Icons.arrow_back_rounded),
             ),
@@ -233,10 +279,8 @@ class _LibraryHeader extends StatelessWidget {
                   controller.currentPath.isEmpty
                       ? 'Your spaces, folders and materials'
                       : '${controller.currentFolders.length} folders • '
-                          '${controller.currentMaterials.length} materials',
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
+                            '${controller.currentMaterials.length} materials',
+                  style: Theme.of(context).textTheme.labelMedium
                       ?.copyWith(color: scheme.onSurfaceVariant),
                 ),
               ],
@@ -246,7 +290,7 @@ class _LibraryHeader extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onStructure,
               icon: const Icon(Icons.account_tree_rounded),
-              label: const Text('Structure'),
+              label: const Text('New'),
             ),
             const SizedBox(width: 8),
             FilledButton.icon(
@@ -257,7 +301,7 @@ class _LibraryHeader extends StatelessWidget {
             const SizedBox(width: 8),
           ] else ...[
             IconButton(
-              tooltip: 'Build structure',
+              tooltip: 'New folder or note',
               onPressed: onStructure,
               icon: const Icon(Icons.account_tree_rounded),
             ),
@@ -318,12 +362,7 @@ class _FolderCanvas extends StatelessWidget {
       slivers: [
         if (folders.isNotEmpty) ...[
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              wide ? 22 : 14,
-              12,
-              wide ? 22 : 14,
-              8,
-            ),
+            padding: EdgeInsets.fromLTRB(wide ? 22 : 14, 12, wide ? 22 : 14, 8),
             sliver: const SliverToBoxAdapter(
               child: _SectionLabel(
                 title: 'Folders',
@@ -332,38 +371,38 @@ class _FolderCanvas extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              wide ? 22 : 14,
-              0,
-              wide ? 22 : 14,
-              18,
-            ),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 285,
-                mainAxisExtent: 112,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
+            padding: EdgeInsets.fromLTRB(wide ? 22 : 14, 0, wide ? 22 : 14, 18),
+            sliver: SliverLayoutBuilder(
+              builder: (context, constraints) => SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount:
+                      (constraints.crossAxisExtent /
+                              (250 * MediaQuery.textScalerOf(context).scale(1)))
+                          .floor()
+                          .clamp(1, 6),
+                  mainAxisExtent:
+                      112 * MediaQuery.textScalerOf(context).scale(1),
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
                   final entry = folders[index];
-                  return _FolderCard(
+                  return EntryMenuRegion(
+                    controller: controller,
                     entry: entry,
-                    folderCount: controller.directFolderCount(entry.path),
-                    materialCount: controller.directMaterialCount(entry.path),
-                    totalMaterials: controller.materialCountUnder(entry.path),
-                    selected: selected.contains(entry.path),
-                    onTap: () => onTap(entry),
-                    onLongPress: () => onLongPress(entry),
-                    onMenu: () => showEntryActions(
-                      context,
-                      controller,
-                      entry,
+                    child: _FolderCard(
+                      entry: entry,
+                      folderCount: controller.directFolderCount(entry.path),
+                      materialCount: controller.directMaterialCount(entry.path),
+                      totalMaterials: controller.materialCountUnder(entry.path),
+                      selected: selected.contains(entry.path),
+                      onTap: () => onTap(entry),
+                      onLongPress: () => onLongPress(entry),
+                      onMenu: () =>
+                          showEntryActions(context, controller, entry),
                     ),
                   );
-                },
-                childCount: folders.length,
+                }, childCount: folders.length),
               ),
             ),
           ),
@@ -393,30 +432,36 @@ class _FolderCanvas extends StatelessWidget {
                 wide ? 22 : 14,
                 120,
               ),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 190,
-                  childAspectRatio: 0.95,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
+              sliver: SliverLayoutBuilder(
+                builder: (context, constraints) => SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount:
+                        (constraints.crossAxisExtent /
+                                (200 *
+                                    MediaQuery.textScalerOf(context).scale(1)))
+                            .floor()
+                            .clamp(1, 8),
+                    mainAxisExtent:
+                        200 * MediaQuery.textScalerOf(context).scale(1),
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
                     final entry = materials[index];
-                    return _MaterialCard(
+                    return EntryMenuRegion(
+                      controller: controller,
                       entry: entry,
-                      selected: selected.contains(entry.path),
-                      selectionActive: selected.isNotEmpty,
-                      onTap: () => onTap(entry),
-                      onLongPress: () => onLongPress(entry),
-                      onMenu: () => showEntryActions(
-                        context,
-                        controller,
-                        entry,
+                      child: _MaterialCard(
+                        entry: entry,
+                        selected: selected.contains(entry.path),
+                        selectionActive: selected.isNotEmpty,
+                        onTap: () => onTap(entry),
+                        onLongPress: () => onLongPress(entry),
+                        onMenu: () =>
+                            showEntryActions(context, controller, entry),
                       ),
                     );
-                  },
-                  childCount: materials.length,
+                  }, childCount: materials.length),
                 ),
               ),
             )
@@ -435,24 +480,28 @@ class _FolderCanvas extends StatelessWidget {
                   final isSelected = selected.contains(entry.path);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: FileRow(
+                    child: EntryMenuRegion(
+                      controller: controller,
                       entry: entry,
-                      selected: isSelected,
-                      onTap: () => onTap(entry),
-                      onLongPress: () => onLongPress(entry),
-                      trailing: selected.isNotEmpty
-                          ? Checkbox(
-                              value: isSelected,
-                              onChanged: (_) => onTap(entry),
-                            )
-                          : IconButton(
-                              icon: const Icon(Icons.more_horiz_rounded),
-                              onPressed: () => showEntryActions(
-                                context,
-                                controller,
-                                entry,
+                      child: FileRow(
+                        entry: entry,
+                        selected: isSelected,
+                        onTap: () => onTap(entry),
+                        onLongPress: () => onLongPress(entry),
+                        trailing: selected.isNotEmpty
+                            ? Checkbox(
+                                value: isSelected,
+                                onChanged: (_) => onTap(entry),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.more_horiz_rounded),
+                                onPressed: () => showEntryActions(
+                                  context,
+                                  controller,
+                                  entry,
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                   );
                 },
@@ -544,12 +593,10 @@ class _FolderCard extends StatelessWidget {
                       folderCount == 0 && materialCount == 0
                           ? 'Empty • ready to organize'
                           : '$folderCount folders • $materialCount here • '
-                              '$totalMaterials total',
+                                '$totalMaterials total',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelSmall
+                      style: Theme.of(context).textTheme.labelSmall
                           ?.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ],
@@ -589,9 +636,7 @@ class _MaterialCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Card(
-      color: selected
-          ? scheme.primaryContainer.withValues(alpha: 0.6)
-          : null,
+      color: selected ? scheme.primaryContainer.withValues(alpha: 0.6) : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
@@ -610,10 +655,7 @@ class _MaterialCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   if (selectionActive)
-                    Checkbox(
-                      value: selected,
-                      onChanged: (_) => onTap(),
-                    )
+                    Checkbox(value: selected, onChanged: (_) => onTap())
                   else
                     IconButton(
                       onPressed: onMenu,
@@ -633,9 +675,7 @@ class _MaterialCard extends StatelessWidget {
                 fileMeta(entry),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
+                style: Theme.of(context).textTheme.labelSmall
                     ?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ],
@@ -658,12 +698,12 @@ class _SectionLabel extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: Theme.of(context)
-              .textTheme
-              .titleSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
         ),
       ],
     );
@@ -688,10 +728,7 @@ class _SelectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       child: Row(
         children: [
-          IconButton(
-            onPressed: onClose,
-            icon: const Icon(Icons.close_rounded),
-          ),
+          IconButton(onPressed: onClose, icon: const Icon(Icons.close_rounded)),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -719,14 +756,15 @@ class _Breadcrumbs extends StatelessWidget {
         .toList();
 
     return SizedBox(
-      height: 45,
+      height: 48 * MediaQuery.textScalerOf(context).scale(1),
       child: ListView(
         scrollDirection: Axis.horizontal,
+        reverse: true,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         children: [
           ActionChip(
             avatar: const Icon(Icons.home_rounded, size: 16),
-            label: const Text('Root'),
+            label: const Text('Library'),
             onPressed: () => controller.openFolder(''),
           ),
           for (var index = 0; index < pieces.length; index++) ...[
@@ -736,9 +774,8 @@ class _Breadcrumbs extends StatelessWidget {
             ),
             ActionChip(
               label: Text(pieces[index]),
-              onPressed: () => controller.openFolder(
-                pieces.take(index + 1).join('/'),
-              ),
+              onPressed: () =>
+                  controller.openFolder(pieces.take(index + 1).join('/')),
             ),
           ],
         ],
@@ -769,9 +806,7 @@ class _InboxGuide extends StatelessWidget {
             ],
           ),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: scheme.tertiary.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: scheme.tertiary.withValues(alpha: 0.18)),
         ),
         child: Row(
           children: [
@@ -787,9 +822,7 @@ class _InboxGuide extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    count == 0
-                        ? 'Share material here from other apps.'
-                        : 'Select items and move them into any nested study space.',
+                    count == 0 ? 'Share material here from other apps.' : 'Select items and move them into any nested study space.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -883,7 +916,7 @@ class _BulkBar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 6, 14, 96),
+        margin: const EdgeInsets.fromLTRB(14, 6, 14, 10),
         padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
         decoration: BoxDecoration(
           color: scheme.inverseSurface,

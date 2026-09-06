@@ -5,53 +5,82 @@ import 'package:flutter/services.dart';
 
 import '../controllers/library_controller.dart';
 import 'actions.dart';
+import 'command_palette.dart';
+import 'desktop_import_target.dart';
 import 'home_page.dart';
 import 'library_page.dart';
 import 'search_page.dart';
 import 'settings_page.dart';
 
 class StudyShell extends StatefulWidget {
-  const StudyShell({super.key});
+  const StudyShell({super.key, this.controller});
+  final LibraryController? controller;
 
   @override
   State<StudyShell> createState() => _StudyShellState();
 }
 
-class _StudyShellState extends State<StudyShell> {
+class _StudyShellState extends State<StudyShell>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController pageAnimation;
+  late final Animation<double> pageOpacity;
   late final LibraryController controller;
   int pageIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    controller = LibraryController()..initialize();
+    pageAnimation = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 160),
+      value: 1,
+    );
+    pageOpacity = pageAnimation.drive(
+      Tween(begin: .88, end: 1.0).chain(CurveTween(curve: Curves.easeOut)),
+    );
+    controller = widget.controller ?? (LibraryController()..initialize());
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    pageAnimation.dispose();
+    if (widget.controller == null) controller.dispose();
     super.dispose();
   }
 
   void _openLibrary([String? path]) {
     if (path != null) controller.openFolder(path);
-    setState(() => pageIndex = 1);
+    _selectPage(1);
   }
 
-  void _openSearch() => setState(() => pageIndex = 2);
+  void _openCommands() => showCommandPalette(
+    context,
+    controller,
+    openFolder: _openLibrary,
+    openSearch: _openSearch,
+    openSettings: () => _selectPage(3),
+  );
 
-  void _selectPage(int value) => setState(() => pageIndex = value);
+  void _openSearch() => _selectPage(2);
+
+  void _selectPage(int value) {
+    if (value == pageIndex) return;
+    setState(() => pageIndex = value);
+    if (!MediaQuery.disableAnimationsOf(context)) {
+      pageAnimation.forward(from: 0);
+    }
+  }
 
   List<Widget> _pages() => [
-        HomePage(
-          controller: controller,
-          openLibrary: _openLibrary,
-          openSearch: _openSearch,
-        ),
-        LibraryPage(controller: controller),
-        SearchPage(controller: controller, openLibrary: _openLibrary),
-        SettingsPage(controller: controller),
-      ];
+    HomePage(
+      controller: controller,
+      openLibrary: _openLibrary,
+      openSearch: _openSearch,
+    ),
+    LibraryPage(controller: controller),
+    SearchPage(controller: controller, openLibrary: _openLibrary),
+    SettingsPage(controller: controller),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -59,26 +88,44 @@ class _StudyShellState extends State<StudyShell> {
       animation: controller,
       builder: (context, _) {
         if (!controller.initialized) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
-        return CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.keyK, control: true): _openSearch,
-            const SingleActivator(LogicalKeyboardKey.keyK, meta: true): _openSearch,
-            const SingleActivator(LogicalKeyboardKey.digit1, alt: true): () => _selectPage(0),
-            const SingleActivator(LogicalKeyboardKey.digit2, alt: true): () => _selectPage(1),
-            const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () => _selectPage(2),
+        return PopScope(
+          canPop: pageIndex == 0,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (pageIndex == 1 && controller.currentPath.isNotEmpty) {
+              controller.goUp();
+            } else {
+              _selectPage(0);
+            }
           },
-          child: Focus(
-            autofocus: true,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth >= 980) {
-                  return _buildDesktop(context);
-                }
-                return _buildCompact(context);
-              },
+          child: CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+                  _openCommands,
+              const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+                  _openCommands,
+              const SingleActivator(LogicalKeyboardKey.digit1, alt: true): () =>
+                  _selectPage(0),
+              const SingleActivator(LogicalKeyboardKey.digit2, alt: true): () =>
+                  _selectPage(1),
+              const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () =>
+                  _selectPage(2),
+            },
+            child: Focus(
+              autofocus: true,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth >= 980) {
+                    return _buildDesktop(context);
+                  }
+                  return _buildCompact(context);
+                },
+              ),
             ),
           ),
         );
@@ -91,7 +138,7 @@ class _StudyShellState extends State<StudyShell> {
     return Scaffold(
       body: Stack(
         children: [
-          const _AmbientBackdrop(),
+          ColoredBox(color: scheme.surface),
           SafeArea(
             child: Row(
               children: [
@@ -99,15 +146,17 @@ class _StudyShellState extends State<StudyShell> {
                   padding: const EdgeInsets.fromLTRB(14, 14, 0, 14),
                   child: _DesktopSidebar(
                     selectedIndex: pageIndex,
+                    controller: controller,
+                    onFolder: _openLibrary,
                     connected: controller.connected,
                     libraryName: controller.libraryName,
                     onSelected: _selectPage,
                     onAdd: controller.connected
                         ? () => showAddSheet(
-                              context,
-                              controller,
-                              fromHome: pageIndex == 0,
-                            )
+                            context,
+                            controller,
+                            fromHome: pageIndex == 0,
+                          )
                         : null,
                   ),
                 ),
@@ -117,13 +166,15 @@ class _StudyShellState extends State<StudyShell> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(28),
                       child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        filter: ImageFilter.blur(sigmaX: 0, sigmaY: 0),
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: scheme.surface.withValues(alpha: 0.82),
                             borderRadius: BorderRadius.circular(28),
                             border: Border.all(
-                              color: scheme.outlineVariant.withValues(alpha: 0.42),
+                              color: scheme.outlineVariant.withValues(
+                                alpha: 0.42,
+                              ),
                             ),
                           ),
                           child: Column(
@@ -133,7 +184,7 @@ class _StudyShellState extends State<StudyShell> {
                                 subtitle: _sectionSubtitle(pageIndex),
                                 connected: controller.connected,
                                 busy: controller.busy,
-                                onSearch: _openSearch,
+                                onSearch: _openCommands,
                                 onRefresh: controller.refresh,
                                 onAdd: () => showAddSheet(
                                   context,
@@ -142,7 +193,15 @@ class _StudyShellState extends State<StudyShell> {
                                 ),
                               ),
                               _statusArea(),
-                              Expanded(child: _animatedPage()),
+                              Expanded(
+                                child: DesktopImportTarget(
+                                  controller: controller,
+                                  destination: pageIndex == 1
+                                      ? controller.currentPath
+                                      : 'Inbox',
+                                  child: _animatedPage(),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -161,12 +220,12 @@ class _StudyShellState extends State<StudyShell> {
   Widget _buildCompact(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      extendBody: true,
+      extendBody: false,
       appBar: AppBar(
         titleSpacing: 18,
         flexibleSpace: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ImageFilter.blur(sigmaX: 0, sigmaY: 0),
             child: ColoredBox(color: scheme.surface.withValues(alpha: 0.76)),
           ),
         ),
@@ -189,55 +248,43 @@ class _StudyShellState extends State<StudyShell> {
       ),
       body: Stack(
         children: [
-          const _AmbientBackdrop(),
+          ColoredBox(color: scheme.surface),
           Column(
             children: [
               _statusArea(),
-              Expanded(child: _animatedPage()),
+              Expanded(
+                child: DesktopImportTarget(
+                  controller: controller,
+                  destination: pageIndex == 1
+                      ? controller.currentPath
+                      : 'Inbox',
+                  child: _animatedPage(),
+                ),
+              ),
             ],
           ),
         ],
       ),
-      floatingActionButton: controller.connected && pageIndex <= 1
-          ? DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [scheme.primary, scheme.tertiary]),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: scheme.primary.withValues(alpha: 0.28),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: FloatingActionButton.extended(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                onPressed: () => showAddSheet(
-                  context,
-                  controller,
-                  fromHome: pageIndex == 0,
-                ),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add'),
-              ),
-            )
-          : null,
       bottomNavigationBar: SafeArea(
         top: false,
         minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(26),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+            filter: ImageFilter.blur(sigmaX: 0, sigmaY: 0),
             child: Container(
               decoration: BoxDecoration(
                 color: scheme.surfaceContainer.withValues(alpha: 0.82),
                 borderRadius: BorderRadius.circular(26),
-                border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.42),
+                ),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x1A000000), blurRadius: 24, offset: Offset(0, 10)),
+                  BoxShadow(
+                    color: Color(0x1A000000),
+                    blurRadius: 24,
+                    offset: Offset(0, 10),
+                  ),
                 ],
               ),
               child: NavigationBar(
@@ -287,12 +334,12 @@ class _StudyShellState extends State<StudyShell> {
                   onDismiss: controller.clearStatus,
                 )
               : controller.notice != null
-                  ? _StatusStrip(
-                      key: const ValueKey('notice'),
-                      text: controller.notice!,
-                      onDismiss: controller.clearStatus,
-                    )
-                  : const SizedBox.shrink(key: ValueKey('none')),
+              ? _StatusStrip(
+                  key: const ValueKey('notice'),
+                  text: controller.notice!,
+                  onDismiss: controller.clearStatus,
+                )
+              : const SizedBox.shrink(key: ValueKey('none')),
         ),
         if (controller.busy) const LinearProgressIndicator(minHeight: 2),
       ],
@@ -301,23 +348,20 @@ class _StudyShellState extends State<StudyShell> {
 
   Widget _animatedPage() {
     final pages = _pages();
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final slide = Tween<Offset>(
-          begin: const Offset(0.018, 0),
-          end: Offset.zero,
-        ).animate(animation);
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(position: slide, child: child),
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey(pageIndex),
-        child: pages[pageIndex],
+    return FadeTransition(
+      opacity: pageOpacity,
+      child: IndexedStack(
+        index: pageIndex,
+        children: [
+          for (var i = 0; i < pages.length; i++)
+            ExcludeFocus(
+              excluding: i != pageIndex,
+              child: TickerMode(
+                enabled: i == pageIndex,
+                child: HeroMode(enabled: i == pageIndex, child: pages[i]),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -326,6 +370,8 @@ class _StudyShellState extends State<StudyShell> {
 class _DesktopSidebar extends StatelessWidget {
   const _DesktopSidebar({
     required this.selectedIndex,
+    required this.controller,
+    required this.onFolder,
     required this.connected,
     required this.libraryName,
     required this.onSelected,
@@ -333,6 +379,8 @@ class _DesktopSidebar extends StatelessWidget {
   });
 
   final int selectedIndex;
+  final LibraryController controller;
+  final ValueChanged<String> onFolder;
   final bool connected;
   final String? libraryName;
   final ValueChanged<int> onSelected;
@@ -344,98 +392,135 @@ class _DesktopSidebar extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        filter: ImageFilter.blur(sigmaX: 0, sigmaY: 0),
         child: Container(
           width: 244,
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
           decoration: BoxDecoration(
             color: scheme.surfaceContainer.withValues(alpha: 0.78),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.42),
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _Brand(),
-              const SizedBox(height: 26),
-              _DesktopNavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                selected: selectedIndex == 0,
-                onTap: () => onSelected(0),
-              ),
-              _DesktopNavItem(
-                icon: Icons.folder_rounded,
-                label: 'Library',
-                selected: selectedIndex == 1,
-                onTap: () => onSelected(1),
-              ),
-              _DesktopNavItem(
-                icon: Icons.manage_search_rounded,
-                label: 'Search',
-                selected: selectedIndex == 2,
-                onTap: () => onSelected(2),
-              ),
-              _DesktopNavItem(
-                icon: Icons.tune_rounded,
-                label: 'Settings',
-                selected: selectedIndex == 3,
-                onTap: () => onSelected(3),
-              ),
-              const SizedBox(height: 18),
-              if (connected)
-                FilledButton.icon(
-                  onPressed: onAdd,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Add material'),
+          child: Material(
+            color: Colors.transparent,
+            child: ListView(
+              children: [
+                const _Brand(),
+                const SizedBox(height: 26),
+                _DesktopNavItem(
+                  icon: Icons.home_rounded,
+                  label: 'Home',
+                  selected: selectedIndex == 0,
+                  onTap: () => onSelected(0),
                 ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHigh.withValues(alpha: 0.68),
-                  borderRadius: BorderRadius.circular(18),
+                _DesktopNavItem(
+                  icon: Icons.folder_rounded,
+                  label: 'Library',
+                  selected: selectedIndex == 1,
+                  onTap: () => onSelected(1),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          connected ? Icons.offline_bolt_rounded : Icons.folder_off_outlined,
-                          size: 17,
-                          color: connected ? scheme.primary : scheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            connected ? 'Offline library' : 'No library',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                      ],
+                _DesktopNavItem(
+                  icon: Icons.manage_search_rounded,
+                  label: 'Search',
+                  selected: selectedIndex == 2,
+                  onTap: () => onSelected(2),
+                ),
+                _DesktopNavItem(
+                  icon: Icons.tune_rounded,
+                  label: 'Settings',
+                  selected: selectedIndex == 3,
+                  onTap: () => onSelected(3),
+                ),
+                const SizedBox(height: 18),
+                if (connected)
+                  FilledButton.icon(
+                    onPressed: onAdd,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Add material'),
+                  ),
+                const SizedBox(height: 20),
+                if (connected)
+                  ListTile(
+                    leading: const Icon(Icons.inbox_outlined),
+                    title: const Text('Inbox'),
+                    trailing: Text(
+                      '${controller.directMaterialCount('Inbox')}',
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      connected ? (libraryName ?? 'Study Library') : 'Connect a local folder to begin.',
-                      maxLines: 2,
+                    onTap: () => onFolder('Inbox'),
+                  ),
+                for (final entry in controller.starredEntries.where(
+                  (e) => e.isDirectory,
+                ))
+                  ListTile(
+                    leading: const Icon(Icons.star_outline, size: 18),
+                    title: Text(
+                      entry.name,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
+                    ),
+                    subtitle: Text(
+                      entry.path,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => onFolder(entry.path),
+                  ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHigh.withValues(alpha: 0.68),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            connected
+                                ? Icons.offline_bolt_rounded
+                                : Icons.folder_off_outlined,
+                            size: 17,
+                            color: connected
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant,
                           ),
-                    ),
-                  ],
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: Text(
+                              connected ? 'Offline library' : 'No library',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        connected
+                            ? (libraryName ?? 'Study Library')
+                            : 'Connect a local folder to begin.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Alt+1/2/3 • Ctrl+K search',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                Text(
+                  'Alt+1/2/3 • Ctrl+K search',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -462,7 +547,9 @@ class _DesktopNavItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 7),
       child: Material(
-        color: selected ? scheme.primaryContainer.withValues(alpha: 0.76) : Colors.transparent,
+        color: selected
+            ? scheme.primaryContainer.withValues(alpha: 0.76)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(15),
         child: InkWell(
           onTap: onTap,
@@ -471,13 +558,23 @@ class _DesktopNavItem extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
             child: Row(
               children: [
-                Icon(icon, size: 20, color: selected ? scheme.primary : scheme.onSurfaceVariant),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 11),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    color: selected ? scheme.onPrimaryContainer : scheme.onSurface,
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                      color: selected
+                          ? scheme.onPrimaryContainer
+                          : scheme.onSurface,
+                    ),
                   ),
                 ),
               ],
@@ -522,16 +619,15 @@ class _DesktopTopBar extends StatelessWidget {
                 Text(
                   section,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -546,7 +642,10 @@ class _DesktopTopBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(15),
                   onTap: onSearch,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 11,
+                    ),
                     child: Row(
                       children: [
                         const Icon(Icons.search_rounded, size: 19),
@@ -559,9 +658,8 @@ class _DesktopTopBar extends StatelessWidget {
                         ),
                         Text(
                           'Ctrl K',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -617,20 +715,31 @@ class _Brand extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 21),
+          child: const Icon(
+            Icons.auto_stories_rounded,
+            color: Colors.white,
+            size: 21,
+          ),
         ),
         const SizedBox(width: 11),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Study', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-            Text(
-              'Offline student library',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Study',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              ),
+              if (!compact)
+                Text(
+                  'Offline student library',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -638,61 +747,18 @@ class _Brand extends StatelessWidget {
 }
 
 String _sectionName(int index) => switch (index) {
-      0 => 'Home',
-      1 => 'Library',
-      2 => 'Search',
-      _ => 'Settings',
-    };
+  0 => 'Home',
+  1 => 'Library',
+  2 => 'Search',
+  _ => 'Settings',
+};
 
 String _sectionSubtitle(int index) => switch (index) {
-      0 => 'Everything you need to continue learning.',
-      1 => 'Organize material into folders that make sense to you.',
-      2 => 'Find anything across every folder and format.',
-      _ => 'Storage, portability and app preferences.',
-    };
-
-class _AmbientBackdrop extends StatelessWidget {
-  const _AmbientBackdrop();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return IgnorePointer(
-      child: Stack(
-        children: [
-          Positioned(
-            top: -120,
-            right: -120,
-            child: Container(
-              width: 330,
-              height: 330,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [scheme.primary.withValues(alpha: 0.10), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 80,
-            left: -140,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [scheme.tertiary.withValues(alpha: 0.07), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+  0 => 'Everything you need to continue learning.',
+  1 => 'Organize material into folders that make sense to you.',
+  2 => 'Find anything across every folder and format.',
+  _ => 'Storage, portability and app preferences.',
+};
 
 class _StatusStrip extends StatelessWidget {
   const _StatusStrip({
@@ -716,9 +782,17 @@ class _StatusStrip extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 9, 8, 9),
       child: Row(
         children: [
-          Icon(error ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, size: 18, color: color),
+          Icon(
+            error
+                ? Icons.error_outline_rounded
+                : Icons.check_circle_outline_rounded,
+            size: 18,
+            color: color,
+          ),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: TextStyle(color: color))),
+          Expanded(
+            child: Text(text, style: TextStyle(color: color)),
+          ),
           IconButton(
             visualDensity: VisualDensity.compact,
             onPressed: onDismiss,

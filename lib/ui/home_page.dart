@@ -13,499 +13,272 @@ class HomePage extends StatelessWidget {
     required this.openLibrary,
     required this.openSearch,
   });
-
   final LibraryController controller;
   final ValueChanged<String?> openLibrary;
   final VoidCallback openSearch;
 
-  static const _legacyRoots = {'Notes', 'Books', 'Slides', 'Recordings', 'Videos'};
+  void _open(BuildContext context, LibraryEntry entry) {
+    if (entry.isDirectory) {
+      openLibrary(entry.path);
+    } else {
+      openStudyViewer(context, controller, entry);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (!controller.connected) return ConnectLibraryView(controller: controller);
-
-    final spaces = controller.rootSpaces.where((space) {
-      if (!_legacyRoots.contains(space.name)) return true;
-      return controller.materialCountUnder(space.path) > 0 || controller.directFolderCount(space.path) > 0;
-    }).toList();
-    final width = MediaQuery.sizeOf(context).width;
-
-    return RefreshIndicator(
-      onRefresh: controller.refresh,
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(width > 900 ? 28 : 18, 10, width > 900 ? 28 : 18, 130),
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SearchLauncher(onTap: openSearch),
-                  const SizedBox(height: 16),
-                  _Hero(
-                    controller: controller,
-                    onCreate: () => showCreateSpaceSheet(context, controller),
-                    onInbox: () => openLibrary('Inbox'),
-                  ),
-                  const SizedBox(height: 28),
-                  SectionTitle(
-                    title: 'Your spaces',
-                    action: 'Open library',
-                    onTap: () => openLibrary(null),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'Semester, GATE, research, projects, club work—build the hierarchy that matches your life.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 13),
-                  _SpacesGrid(
-                    controller: controller,
-                    spaces: spaces,
-                    onOpen: (path) => openLibrary(path),
-                    onCreate: () => showCreateSpaceSheet(context, controller),
-                  ),
-                  const SizedBox(height: 24),
-                  _InboxStrip(
-                    count: controller.directMaterialCount('Inbox'),
-                    onTap: () => openLibrary('Inbox'),
-                  ),
-                  if (controller.recentFiles.isNotEmpty) ...[
-                    const SizedBox(height: 30),
-                    const SectionTitle(title: 'Continue learning'),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 154,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: controller.recentFiles.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 10),
-                        itemBuilder: (context, index) {
-                          final entry = controller.recentFiles[index];
-                          return _RecentCard(
-                            entry: entry,
-                            onTap: () => openStudyViewer(context, controller, entry),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 30),
-                  const SectionTitle(title: 'Library pulse'),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 9,
-                    runSpacing: 9,
+    if (!controller.connected) {
+      return ConnectLibraryView(controller: controller);
+    }
+    final scheme = Theme.of(context).colorScheme;
+    final recent = controller.recentFiles;
+    final stars = controller.starredEntries;
+    final spaces = controller.rootSpaces;
+    final inbox = controller.directMaterialCount('Inbox');
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final padding = constraints.maxWidth > 700 ? 28.0 : 16.0;
+        return RefreshIndicator(
+          onRefresh: controller.refresh,
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(padding, 20, padding, 16),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _Metric(icon: Icons.folder_copy_rounded, label: 'Spaces', count: spaces.length),
-                      _Metric(icon: Icons.picture_as_pdf_rounded, label: 'PDFs', count: controller.countKind(LibraryKind.pdf)),
-                      _Metric(icon: Icons.slideshow_rounded, label: 'Slides', count: controller.countKind(LibraryKind.slides)),
-                      _Metric(icon: Icons.movie_rounded, label: 'Videos', count: controller.countKind(LibraryKind.video)),
-                      _Metric(icon: Icons.graphic_eq_rounded, label: 'Audio', count: controller.countKind(LibraryKind.audio)),
+                      Text(
+                        'Your study desk',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Pick up where you left off. Everything stays on your device.',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: controller.busy
+                                ? null
+                                : () => showSmartImportSheet(
+                                    context,
+                                    controller,
+                                    basePath: 'Inbox',
+                                  ),
+                            icon: const Icon(Icons.add_rounded),
+                            label: const Text('Capture to Inbox'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                showCreateSpaceSheet(context, controller),
+                            icon: const Icon(Icons.create_new_folder_outlined),
+                            label: const Text('New workspace'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => showNewNoteSheet(
+                              context,
+                              controller,
+                              destination: 'Inbox',
+                            ),
+                            icon: const Icon(Icons.edit_note),
+                            label: const Text('Quick note'),
+                          ),
+                          TextButton.icon(
+                            onPressed: openSearch,
+                            icon: const Icon(Icons.search),
+                            label: const Text('Find material'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Material(
+                        color: scheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(14),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          leading: Icon(
+                            Icons.inbox_outlined,
+                            color: scheme.secondary,
+                          ),
+                          title: Text(
+                            inbox == 0
+                                ? 'Inbox is clear'
+                                : '$inbox ${inbox == 1 ? 'item' : 'items'} ready to file',
+                          ),
+                          subtitle: Text(
+                            inbox == 0 ? 'New shared files land here.' : 'Select a batch, choose a subject, and file it together.',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => openLibrary('Inbox'),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const SectionTitle(title: 'Continue studying'),
+                      if (recent.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            'Open a material to start your reading history.',
+                          ),
+                        ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SearchLauncher extends StatelessWidget {
-  const _SearchLauncher({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerLow.withValues(alpha: 0.86),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.38)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-          child: Row(
-            children: [
-              Icon(Icons.search_rounded, color: scheme.primary),
-              const SizedBox(width: 11),
-              Expanded(child: Text('Search every folder and material', style: TextStyle(color: scheme.onSurfaceVariant))),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(8)),
-                child: Text('Ctrl K', style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Hero extends StatefulWidget {
-  const _Hero({required this.controller, required this.onCreate, required this.onInbox});
-
-  final LibraryController controller;
-  final VoidCallback onCreate;
-  final VoidCallback onInbox;
-
-  @override
-  State<_Hero> createState() => _HeroState();
-}
-
-class _HeroState extends State<_Hero> {
-  bool moved = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => moved = true);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final wide = MediaQuery.sizeOf(context).width > 720;
-    final files = widget.controller.allEntries.where((entry) => !entry.isDirectory).length;
-
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        color: scheme.surfaceContainerLow,
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.22)),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            scheme.primary.withValues(alpha: 0.16),
-            scheme.surfaceContainerLow,
-            scheme.tertiary.withValues(alpha: 0.10),
-          ],
-        ),
-      ),
-      child: Stack(
-        children: [
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 1400),
-            curve: Curves.easeInOutCubic,
-            right: moved ? -35 : -75,
-            top: moved ? -55 : -20,
-            child: Container(
-              width: wide ? 250 : 180,
-              height: wide ? 250 : 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [scheme.secondary.withValues(alpha: 0.18), scheme.secondary.withValues(alpha: 0)],
                 ),
               ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(wide ? 28 : 22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _Badge(icon: Icons.offline_bolt_rounded, label: 'Offline by design'),
-                    const Spacer(),
-                    Text('$files materials', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant)),
-                  ],
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: padding),
+                sliver: SliverList.builder(
+                  itemCount: recent.length,
+                  itemBuilder: (context, index) {
+                    final entry = recent[index];
+                    return FileRow(
+                      entry: entry,
+                      showPath: true,
+                      onTap: () => _open(context, entry),
+                      trailing: IconButton(
+                        tooltip: 'Material actions',
+                        icon: const Icon(Icons.more_horiz),
+                        onPressed: () =>
+                            showEntryActions(context, controller, entry),
+                      ),
+                    );
+                  },
                 ),
-                SizedBox(height: wide ? 38 : 27),
-                Text('Build your own\nstudy system.', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: wide ? 40 : null, height: 0.98)),
-                const SizedBox(height: 12),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 660),
-                  child: Text(
-                    'Every folder can contain folders and material together. Use templates when useful, ignore them when they are not.',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant, height: 1.45),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(padding, 24, padding, 12),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SectionTitle(title: 'Starred'),
+                      if (stars.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Star a folder, syllabus or formula sheet from its menu for quick access.',
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    FilledButton.icon(onPressed: widget.onCreate, icon: const Icon(Icons.add_rounded), label: const Text('Create a space')),
-                    OutlinedButton.icon(onPressed: widget.onInbox, icon: const Icon(Icons.inbox_rounded), label: const Text('Open Inbox')),
-                  ],
+              ),
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: padding),
+                sliver: SliverList.builder(
+                  itemCount: stars.length,
+                  itemBuilder: (context, index) {
+                    final entry = stars[index];
+                    return FileRow(
+                      entry: entry,
+                      showPath: true,
+                      heroEnabled: false,
+                      onTap: () => _open(context, entry),
+                      trailing: IconButton(
+                        tooltip: 'Remove star',
+                        icon: Icon(Icons.star_rounded, color: scheme.primary),
+                        onPressed: () => controller.toggleStar(entry),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SpacesGrid extends StatelessWidget {
-  const _SpacesGrid({required this.controller, required this.spaces, required this.onOpen, required this.onCreate});
-
-  final LibraryController controller;
-  final List<LibraryEntry> spaces;
-  final ValueChanged<String> onOpen;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final columns = width > 1050 ? 4 : width > 650 ? 3 : 2;
-    final cards = <Widget>[
-      for (final space in spaces)
-        _SpaceCard(
-          entry: space,
-          folders: controller.directFolderCount(space.path),
-          materials: controller.materialCountUnder(space.path),
-          onTap: () => onOpen(space.path),
-        ),
-      _CreateCard(onTap: onCreate),
-    ];
-
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: columns,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: width > 650 ? 1.42 : 1.05,
-      children: cards,
-    );
-  }
-}
-
-class _SpaceCard extends StatelessWidget {
-  const _SpaceCard({required this.entry, required this.folders, required this.materials, required this.onTap});
-
-  final LibraryEntry entry;
-  final int folders;
-  final int materials;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [scheme.primary.withValues(alpha: 0.28), scheme.secondary.withValues(alpha: 0.14)]),
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    child: Icon(Icons.folder_rounded, color: scheme.primary),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(padding, 24, padding, 12),
+                sliver: SliverToBoxAdapter(
+                  child: SectionTitle(
+                    title: 'Your spaces',
+                    action: 'Browse all',
+                    onTap: () => openLibrary(''),
                   ),
-                  const Spacer(),
-                  Icon(Icons.arrow_outward_rounded, size: 18, color: scheme.onSurfaceVariant),
-                ],
-              ),
-              const Spacer(),
-              Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-              const SizedBox(height: 4),
-              Text('$folders folders • $materials materials', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CreateCard extends StatelessWidget {
-  const _CreateCard({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.primary.withValues(alpha: 0.07),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: scheme.primary.withValues(alpha: 0.28)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: const Padding(
-          padding: EdgeInsets.all(15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.add_circle_outline_rounded, size: 30),
-              Spacer(),
-              Text('New space', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-              SizedBox(height: 4),
-              Text('Semester • GATE • Project • Custom', maxLines: 2, overflow: TextOverflow.ellipsis),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InboxStrip extends StatelessWidget {
-  const _InboxStrip({required this.count, required this.onTap});
-  final int count;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerLow.withValues(alpha: 0.84),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.36)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(color: scheme.tertiary.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
-                child: Icon(Icons.inbox_rounded, color: scheme.tertiary),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Inbox', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 2),
-                    Text(count == 0 ? 'Shared and unorganized material lands here.' : '$count item${count == 1 ? '' : 's'} waiting to be organized.', style: Theme.of(context).textTheme.bodySmall),
-                  ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(padding, 0, padding, 100),
+                sliver: SliverGrid.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount:
+                        ((constraints.maxWidth - padding * 2) /
+                                (260 *
+                                    MediaQuery.textScalerOf(context).scale(1)))
+                            .floor()
+                            .clamp(1, 5),
+                    mainAxisExtent:
+                        120 * MediaQuery.textScalerOf(context).scale(1),
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                  ),
+                  itemCount: spaces.length,
+                  itemBuilder: (context, index) {
+                    final entry = spaces[index];
+                    return Material(
+                      color: scheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => openLibrary(entry.path),
+                        onLongPress: () =>
+                            showEntryActions(context, controller, entry),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.folder_outlined,
+                                    color: scheme.primary,
+                                  ),
+                                  const Spacer(),
+                                  SizedBox(
+                                    height: 40,
+                                    child: IconButton(
+                                      tooltip: controller.isStarred(entry)
+                                          ? 'Unpin folder'
+                                          : 'Pin folder',
+                                      onPressed: () =>
+                                          controller.toggleStar(entry),
+                                      icon: Icon(
+                                        controller.isStarred(entry)
+                                            ? Icons.star_rounded
+                                            : Icons.star_outline_rounded,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                entry.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${controller.materialCountUnder(entry.path)} materials',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: scheme.secondary),
-          const SizedBox(width: 6),
-          Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800)),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecentCard extends StatelessWidget {
-  const _RecentCard({required this.entry, required this.onTap});
-  final LibraryEntry entry;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      width: 220,
-      child: Card(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(15),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    FileIcon(entry: entry, heroTag: 'entry:${entry.path}'),
-                    const Spacer(),
-                    Icon(Icons.arrow_outward_rounded, size: 18, color: scheme.onSurfaceVariant),
-                  ],
-                ),
-                const Spacer(),
-                Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text(entry.path, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({required this.icon, required this.label, required this.count});
-  final IconData icon;
-  final String label;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.34)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 17, color: scheme.primary),
-          const SizedBox(width: 7),
-          Text('$count $label', style: const TextStyle(fontWeight: FontWeight.w700)),
-        ],
-      ),
+        );
+      },
     );
   }
 }
