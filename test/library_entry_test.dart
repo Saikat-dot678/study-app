@@ -3,13 +3,13 @@ import 'package:study_app/models/library_entry.dart';
 
 void main() {
   LibraryEntry entry(String name, {bool directory = false}) => LibraryEntry(
-        name: name,
-        path: name,
-        isDirectory: directory,
-        mime: null,
-        size: 0,
-        lastModified: null,
-      );
+    name: name,
+    path: name,
+    isDirectory: directory,
+    mime: null,
+    size: 0,
+    lastModified: null,
+  );
 
   test('classifies common student file types', () {
     expect(entry('lecture.pdf').kind, LibraryKind.pdf);

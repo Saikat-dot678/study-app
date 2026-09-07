@@ -5,6 +5,7 @@ import '../models/library_entry.dart';
 import '../viewers/viewer_page.dart';
 import 'actions.dart';
 import 'library_widgets.dart';
+import 'motion.dart';
 
 enum _LibrarySort { name, newest, type }
 
@@ -24,7 +25,13 @@ class _LibraryPageState extends State<LibraryPage> {
   LibraryController get controller => widget.controller;
   bool get selecting => selected.isNotEmpty;
 
-  static const _legacyRoots = {'Notes', 'Books', 'Slides', 'Recordings', 'Videos'};
+  static const _legacyRoots = {
+    'Notes',
+    'Books',
+    'Slides',
+    'Recordings',
+    'Videos',
+  };
 
   List<LibraryEntry> get visibleEntries {
     final values = controller.entries.where((entry) {
@@ -45,11 +52,13 @@ class _LibraryPageState extends State<LibraryPage> {
       return switch (sort) {
         _LibrarySort.name => compareName(a, b),
         _LibrarySort.newest =>
-          (b.lastModified?.millisecondsSinceEpoch ?? 0)
-              .compareTo(a.lastModified?.millisecondsSinceEpoch ?? 0),
-        _LibrarySort.type => a.kind.index == b.kind.index
-            ? compareName(a, b)
-            : a.kind.index.compareTo(b.kind.index),
+          (b.lastModified?.millisecondsSinceEpoch ?? 0).compareTo(
+            a.lastModified?.millisecondsSinceEpoch ?? 0,
+          ),
+        _LibrarySort.type =>
+          a.kind.index == b.kind.index
+              ? compareName(a, b)
+              : a.kind.index.compareTo(b.kind.index),
       };
     });
     return values;
@@ -111,34 +120,56 @@ class _LibraryPageState extends State<LibraryPage> {
         if (!selecting && controller.currentPath == 'Inbox')
           _InboxGuide(
             count: materials.length,
-            onImport: () => showSmartImportSheet(
-              context,
-              controller,
-              basePath: 'Inbox',
-            ),
+            onImport: () =>
+                showSmartImportSheet(context, controller, basePath: 'Inbox'),
           ),
         Expanded(
-          child: entries.isEmpty
-              ? _EmptyFolder(
-                  onImport: () => showSmartImportSheet(
-                    context,
-                    controller,
-                    basePath: controller.currentPath,
+          child: AnimatedSwitcher(
+            duration: StudyMotion.duration(context, StudyMotion.emphasized),
+            switchInCurve: StudyMotion.curve,
+            switchOutCurve: StudyMotion.exitCurve,
+            layoutBuilder: (currentChild, previousChildren) => Stack(
+              fit: StackFit.expand,
+              children: [...previousChildren, ?currentChild],
+            ),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: Offset(
+                    controller.navigationDelta < 0 ? -0.025 : 0.025,
+                    0,
                   ),
-                  onStructure: () => showCreateSpaceSheet(
-                    context,
-                    controller,
-                    parent: controller.currentPath,
-                  ),
-                )
-              : _FolderCanvas(
-                  controller: controller,
-                  folders: folders,
-                  materials: materials,
-                  selected: selected,
-                  onTap: _handleTap,
-                  onLongPress: _toggle,
-                ),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
+            child: KeyedSubtree(
+              key: ValueKey(controller.currentPath),
+              child: entries.isEmpty
+                  ? _EmptyFolder(
+                      onImport: () => showSmartImportSheet(
+                        context,
+                        controller,
+                        basePath: controller.currentPath,
+                      ),
+                      onStructure: () => showCreateSpaceSheet(
+                        context,
+                        controller,
+                        parent: controller.currentPath,
+                      ),
+                    )
+                  : _FolderCanvas(
+                      controller: controller,
+                      folders: folders,
+                      materials: materials,
+                      selected: selected,
+                      onTap: _handleTap,
+                      onLongPress: _toggle,
+                    ),
+            ),
+          ),
         ),
         if (selecting)
           _BulkBar(
@@ -233,10 +264,8 @@ class _LibraryHeader extends StatelessWidget {
                   controller.currentPath.isEmpty
                       ? 'Your spaces, folders and materials'
                       : '${controller.currentFolders.length} folders • '
-                          '${controller.currentMaterials.length} materials',
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelMedium
+                            '${controller.currentMaterials.length} materials',
+                  style: Theme.of(context).textTheme.labelMedium
                       ?.copyWith(color: scheme.onSurfaceVariant),
                 ),
               ],
@@ -318,12 +347,7 @@ class _FolderCanvas extends StatelessWidget {
       slivers: [
         if (folders.isNotEmpty) ...[
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              wide ? 22 : 14,
-              12,
-              wide ? 22 : 14,
-              8,
-            ),
+            padding: EdgeInsets.fromLTRB(wide ? 22 : 14, 12, wide ? 22 : 14, 8),
             sliver: const SliverToBoxAdapter(
               child: _SectionLabel(
                 title: 'Folders',
@@ -332,12 +356,7 @@ class _FolderCanvas extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              wide ? 22 : 14,
-              0,
-              wide ? 22 : 14,
-              18,
-            ),
+            padding: EdgeInsets.fromLTRB(wide ? 22 : 14, 0, wide ? 22 : 14, 18),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 285,
@@ -345,26 +364,26 @@ class _FolderCanvas extends StatelessWidget {
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final entry = folders[index];
-                  return _FolderCard(
-                    entry: entry,
-                    folderCount: controller.directFolderCount(entry.path),
-                    materialCount: controller.directMaterialCount(entry.path),
-                    totalMaterials: controller.materialCountUnder(entry.path),
-                    selected: selected.contains(entry.path),
-                    onTap: () => onTap(entry),
-                    onLongPress: () => onLongPress(entry),
-                    onMenu: () => showEntryActions(
-                      context,
-                      controller,
-                      entry,
-                    ),
-                  );
-                },
-                childCount: folders.length,
-              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final entry = folders[index];
+                return _FolderCard(
+                  entry: entry,
+                  folderCount: controller.directFolderCount(entry.path),
+                  materialCount: controller.directMaterialCount(entry.path),
+                  totalMaterials: controller.materialCountUnder(entry.path),
+                  selected: selected.contains(entry.path),
+                  onTap: () => onTap(entry),
+                  onLongPress: () => onLongPress(entry),
+                  onMenu: () => showEntryActions(context, controller, entry),
+                  onSecondaryTapDown: (details) => showEntryContextMenu(
+                    context,
+                    controller,
+                    entry,
+                    details.globalPosition,
+                    onOpen: () => onTap(entry),
+                  ),
+                );
+              }, childCount: folders.length),
             ),
           ),
         ],
@@ -400,24 +419,24 @@ class _FolderCanvas extends StatelessWidget {
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final entry = materials[index];
-                    return _MaterialCard(
-                      entry: entry,
-                      selected: selected.contains(entry.path),
-                      selectionActive: selected.isNotEmpty,
-                      onTap: () => onTap(entry),
-                      onLongPress: () => onLongPress(entry),
-                      onMenu: () => showEntryActions(
-                        context,
-                        controller,
-                        entry,
-                      ),
-                    );
-                  },
-                  childCount: materials.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final entry = materials[index];
+                  return _MaterialCard(
+                    entry: entry,
+                    selected: selected.contains(entry.path),
+                    selectionActive: selected.isNotEmpty,
+                    onTap: () => onTap(entry),
+                    onLongPress: () => onLongPress(entry),
+                    onMenu: () => showEntryActions(context, controller, entry),
+                    onSecondaryTapDown: (details) => showEntryContextMenu(
+                      context,
+                      controller,
+                      entry,
+                      details.globalPosition,
+                      onOpen: () => onTap(entry),
+                    ),
+                  );
+                }, childCount: materials.length),
               ),
             )
           else
@@ -440,6 +459,13 @@ class _FolderCanvas extends StatelessWidget {
                       selected: isSelected,
                       onTap: () => onTap(entry),
                       onLongPress: () => onLongPress(entry),
+                      onSecondaryTapDown: (details) => showEntryContextMenu(
+                        context,
+                        controller,
+                        entry,
+                        details.globalPosition,
+                        onOpen: () => onTap(entry),
+                      ),
                       trailing: selected.isNotEmpty
                           ? Checkbox(
                               value: isSelected,
@@ -447,11 +473,8 @@ class _FolderCanvas extends StatelessWidget {
                             )
                           : IconButton(
                               icon: const Icon(Icons.more_horiz_rounded),
-                              onPressed: () => showEntryActions(
-                                context,
-                                controller,
-                                entry,
-                              ),
+                              onPressed: () =>
+                                  showEntryActions(context, controller, entry),
                             ),
                     ),
                   );
@@ -474,6 +497,7 @@ class _FolderCard extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onMenu,
+    required this.onSecondaryTapDown,
   });
 
   final LibraryEntry entry;
@@ -484,82 +508,86 @@ class _FolderCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onMenu;
+  final GestureTapDownCallback onSecondaryTapDown;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Material(
-      color: selected
-          ? scheme.primary.withValues(alpha: 0.16)
-          : scheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(
+    return GestureDetector(
+      onSecondaryTapDown: onSecondaryTapDown,
+      child: HoverLift(
+        child: Material(
           color: selected
-              ? scheme.primary.withValues(alpha: 0.5)
-              : scheme.outlineVariant.withValues(alpha: 0.38),
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      scheme.primary.withValues(alpha: 0.28),
-                      scheme.secondary.withValues(alpha: 0.13),
-                    ],
+              ? scheme.primary.withValues(alpha: 0.16)
+              : scheme.surfaceContainerLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(
+              color: selected
+                  ? scheme.primary.withValues(alpha: 0.5)
+                  : scheme.outlineVariant.withValues(alpha: 0.38),
+            ),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          scheme.primary.withValues(alpha: 0.28),
+                          scheme.secondary.withValues(alpha: 0.13),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.folder_rounded,
+                      size: 28,
+                      color: scheme.primary,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  Icons.folder_rounded,
-                  size: 28,
-                  color: scheme.primary,
-                ),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          folderCount == 0 && materialCount == 0
+                              ? 'Empty • ready to organize'
+                              : '$folderCount folders • $materialCount here • '
+                                    '$totalMaterials total',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      folderCount == 0 && materialCount == 0
-                          ? 'Empty • ready to organize'
-                          : '$folderCount folders • $materialCount here • '
-                              '$totalMaterials total',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelSmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    onPressed: onMenu,
+                    icon: const Icon(Icons.more_horiz_rounded),
+                  ),
+                ],
               ),
-              IconButton(
-                onPressed: onMenu,
-                icon: const Icon(Icons.more_horiz_rounded),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -575,6 +603,7 @@ class _MaterialCard extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onMenu,
+    required this.onSecondaryTapDown,
   });
 
   final LibraryEntry entry;
@@ -583,62 +612,63 @@ class _MaterialCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onMenu;
+  final GestureTapDownCallback onSecondaryTapDown;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Card(
-      color: selected
-          ? scheme.primaryContainer.withValues(alpha: 0.6)
-          : null,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(13),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return GestureDetector(
+      onSecondaryTapDown: onSecondaryTapDown,
+      child: HoverLift(
+        child: Card(
+          color: selected
+              ? scheme.primaryContainer.withValues(alpha: 0.6)
+              : null,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.all(13),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FileIcon(
-                    entry: entry,
-                    large: true,
-                    heroTag: 'entry:${entry.path}',
+                  Row(
+                    children: [
+                      FileIcon(
+                        entry: entry,
+                        large: true,
+                        heroTag: 'entry:${entry.path}',
+                      ),
+                      const Spacer(),
+                      if (selectionActive)
+                        Checkbox(value: selected, onChanged: (_) => onTap())
+                      else
+                        IconButton(
+                          onPressed: onMenu,
+                          icon: const Icon(Icons.more_horiz_rounded),
+                        ),
+                    ],
                   ),
                   const Spacer(),
-                  if (selectionActive)
-                    Checkbox(
-                      value: selected,
-                      onChanged: (_) => onTap(),
-                    )
-                  else
-                    IconButton(
-                      onPressed: onMenu,
-                      icon: const Icon(Icons.more_horiz_rounded),
-                    ),
+                  Text(
+                    entry.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    fileMeta(entry),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
                 ],
               ),
-              const Spacer(),
-              Text(
-                entry.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                fileMeta(entry),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelSmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -658,12 +688,14 @@ class _SectionLabel extends StatelessWidget {
       children: [
         Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: Theme.of(context)
-              .textTheme
-              .titleSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
+        Flexible(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
         ),
       ],
     );
@@ -688,10 +720,7 @@ class _SelectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       child: Row(
         children: [
-          IconButton(
-            onPressed: onClose,
-            icon: const Icon(Icons.close_rounded),
-          ),
+          IconButton(onPressed: onClose, icon: const Icon(Icons.close_rounded)),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -736,9 +765,8 @@ class _Breadcrumbs extends StatelessWidget {
             ),
             ActionChip(
               label: Text(pieces[index]),
-              onPressed: () => controller.openFolder(
-                pieces.take(index + 1).join('/'),
-              ),
+              onPressed: () =>
+                  controller.openFolder(pieces.take(index + 1).join('/')),
             ),
           ],
         ],
@@ -769,9 +797,7 @@ class _InboxGuide extends StatelessWidget {
             ],
           ),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: scheme.tertiary.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: scheme.tertiary.withValues(alpha: 0.18)),
         ),
         child: Row(
           children: [
@@ -787,9 +813,7 @@ class _InboxGuide extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    count == 0
-                        ? 'Share material here from other apps.'
-                        : 'Select items and move them into any nested study space.',
+                    count == 0 ? 'Share material here from other apps.' : 'Select items and move them into any nested study space.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

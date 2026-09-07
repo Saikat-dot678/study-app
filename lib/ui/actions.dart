@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../controllers/library_controller.dart';
 import '../models/library_entry.dart';
@@ -14,15 +15,47 @@ class _MaterialBucket {
 }
 
 const _materialBuckets = <_MaterialBucket>[
-  _MaterialBucket('Notes', Icons.edit_note_rounded, 'Handwritten scans, text, docs'),
-  _MaterialBucket('Slides', Icons.slideshow_rounded, 'PPT, PPTX and lecture decks'),
-  _MaterialBucket('Books', Icons.auto_stories_rounded, 'PDFs, books and references'),
+  _MaterialBucket(
+    'Notes',
+    Icons.edit_note_rounded,
+    'Handwritten scans, text, docs',
+  ),
+  _MaterialBucket(
+    'Slides',
+    Icons.slideshow_rounded,
+    'PPT, PPTX and lecture decks',
+  ),
+  _MaterialBucket(
+    'Books',
+    Icons.auto_stories_rounded,
+    'PDFs, books and references',
+  ),
   _MaterialBucket('PYQs', Icons.history_edu_rounded, 'Previous-year questions'),
-  _MaterialBucket('Assignments', Icons.assignment_rounded, 'Sheets, homework and solutions'),
-  _MaterialBucket('Papers', Icons.science_rounded, 'Research papers and reading'),
-  _MaterialBucket('Videos', Icons.smart_display_rounded, 'Lectures and recorded classes'),
-  _MaterialBucket('Audio', Icons.graphic_eq_rounded, 'Recordings and audio lectures'),
-  _MaterialBucket('Code', Icons.code_rounded, 'Programs, notebooks and datasets'),
+  _MaterialBucket(
+    'Assignments',
+    Icons.assignment_rounded,
+    'Sheets, homework and solutions',
+  ),
+  _MaterialBucket(
+    'Papers',
+    Icons.science_rounded,
+    'Research papers and reading',
+  ),
+  _MaterialBucket(
+    'Videos',
+    Icons.smart_display_rounded,
+    'Lectures and recorded classes',
+  ),
+  _MaterialBucket(
+    'Audio',
+    Icons.graphic_eq_rounded,
+    'Recordings and audio lectures',
+  ),
+  _MaterialBucket(
+    'Code',
+    Icons.code_rounded,
+    'Programs, notebooks and datasets',
+  ),
 ];
 
 Future<void> showAddSheet(
@@ -31,7 +64,9 @@ Future<void> showAddSheet(
   required bool fromHome,
 }) async {
   final basePath = fromHome ? '' : controller.currentPath;
-  final targetLabel = basePath.isEmpty ? 'Library root' : basePath.split('/').last;
+  final targetLabel = basePath.isEmpty
+      ? 'Library root'
+      : basePath.split('/').last;
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -63,8 +98,15 @@ Future<void> showAddSheet(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Add to Study', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-                    Text('Inside $targetLabel', style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      'Add to Study',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
+                    ),
+                    Text(
+                      'Inside $targetLabel',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -125,7 +167,10 @@ Future<void> showAddSheet(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
                 Navigator.pop(sheetContext);
-                showModalBottomSheet<void>(context: context, builder: (_) => const _ShareHintSheet());
+                showModalBottomSheet<void>(
+                  context: context,
+                  builder: (_) => const _ShareHintSheet(),
+                );
               },
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -133,7 +178,11 @@ Future<void> showAddSheet(
                   children: [
                     Icon(Icons.ios_share_rounded, size: 20),
                     SizedBox(width: 10),
-                    Expanded(child: Text('Tip: share from WhatsApp, Files or Gallery → Study App → Inbox')),
+                    Expanded(
+                      child: Text(
+                        'Tip: share from WhatsApp, Files or Gallery → Study App → Inbox',
+                      ),
+                    ),
                     Icon(Icons.chevron_right_rounded),
                   ],
                 ),
@@ -167,7 +216,11 @@ Future<void> showSmartImportSheet(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Where should this material go?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+              Text(
+                'Where should this material go?',
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w900),
+              ),
               const SizedBox(height: 5),
               Text(
                 'Base: $destinationLabel. Choose a type and Study will create/reuse that folder here.',
@@ -201,7 +254,10 @@ Future<void> showSmartImportSheet(
                         caption: bucket.caption,
                         onTap: () {
                           Navigator.pop(sheetContext);
-                          controller.importOrganized(basePath: basePath, category: bucket.name);
+                          controller.importOrganized(
+                            basePath: basePath,
+                            category: bucket.name,
+                          );
                         },
                       ),
                     _BucketCard(
@@ -210,9 +266,16 @@ Future<void> showSmartImportSheet(
                       caption: 'Create your own category name',
                       onTap: () async {
                         Navigator.pop(sheetContext);
-                        final custom = await _askForName(context, title: 'Custom material type', hint: 'e.g. Cheatsheets');
+                        final custom = await _askForName(
+                          context,
+                          title: 'Custom material type',
+                          hint: 'e.g. Cheatsheets',
+                        );
                         if (custom != null) {
-                          await controller.importOrganized(basePath: basePath, category: custom);
+                          await controller.importOrganized(
+                            basePath: basePath,
+                            category: custom,
+                          );
                         }
                       },
                     ),
@@ -246,10 +309,16 @@ Future<void> showCreateSpaceSheet(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Build a study workspace', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+              Text(
+                'Build a study workspace',
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w900),
+              ),
               const SizedBox(height: 5),
               Text(
-                parent.isEmpty ? 'Create a top-level space, then nest without limits.' : 'Create a structured space inside ${parent.split('/').last}.',
+                parent.isEmpty
+                    ? 'Create a top-level space, then nest without limits.'
+                    : 'Create a structured space inside ${parent.split('/').last}.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
@@ -263,7 +332,11 @@ Future<void> showCreateSpaceSheet(
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Starting structure', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+              Text(
+                'Starting structure',
+                style: Theme.of(context).textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
               const SizedBox(height: 9),
               _TemplateChoice(
                 selected: selected == _SpaceTemplate.blank,
@@ -322,11 +395,16 @@ Future<void> showCreateSpaceSheet(
 }
 
 List<String> _templateChildren(_SpaceTemplate template) => switch (template) {
-      _SpaceTemplate.blank => const [],
-      _SpaceTemplate.semester => const ['Subjects', 'Assignments', 'Exam Prep', 'Resources'],
-      _SpaceTemplate.exam => const ['Subjects', 'PYQs', 'Mock Tests', 'Revision'],
-      _SpaceTemplate.project => const ['Papers', 'Notes', 'Data', 'Presentations'],
-    };
+  _SpaceTemplate.blank => const [],
+  _SpaceTemplate.semester => const [
+    'Subjects',
+    'Assignments',
+    'Exam Prep',
+    'Resources',
+  ],
+  _SpaceTemplate.exam => const ['Subjects', 'PYQs', 'Mock Tests', 'Revision'],
+  _SpaceTemplate.project => const ['Papers', 'Notes', 'Data', 'Presentations'],
+};
 
 class _TemplateChoice extends StatelessWidget {
   const _TemplateChoice({
@@ -349,10 +427,16 @@ class _TemplateChoice extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: selected ? scheme.primaryContainer.withValues(alpha: 0.72) : scheme.surfaceContainerLow,
+        color: selected
+            ? scheme.primaryContainer.withValues(alpha: 0.72)
+            : scheme.surfaceContainerLow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: selected ? scheme.primary.withValues(alpha: 0.5) : scheme.outlineVariant.withValues(alpha: 0.35)),
+          side: BorderSide(
+            color: selected
+                ? scheme.primary.withValues(alpha: 0.5)
+                : scheme.outlineVariant.withValues(alpha: 0.35),
+          ),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
@@ -361,19 +445,29 @@ class _TemplateChoice extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                Icon(icon, color: selected ? scheme.primary : scheme.onSurfaceVariant),
+                Icon(
+                  icon,
+                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                      Text(
+                        title,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
                       const SizedBox(height: 2),
-                      Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 ),
-                if (selected) Icon(Icons.check_circle_rounded, color: scheme.primary),
+                if (selected)
+                  Icon(Icons.check_circle_rounded, color: scheme.primary),
               ],
             ),
           ),
@@ -402,7 +496,9 @@ class _BucketCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Material(
-      color: highlighted ? scheme.primaryContainer.withValues(alpha: 0.55) : scheme.surfaceContainerLow,
+      color: highlighted
+          ? scheme.primaryContainer.withValues(alpha: 0.55)
+          : scheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.34)),
@@ -419,7 +515,12 @@ class _BucketCard extends StatelessWidget {
               const Spacer(),
               Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 2),
-              Text(caption, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall),
+              Text(
+                caption,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
             ],
           ),
         ),
@@ -429,7 +530,12 @@ class _BucketCard extends StatelessWidget {
 }
 
 class _AddCard extends StatelessWidget {
-  const _AddCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _AddCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String title;
@@ -462,7 +568,12 @@ class _AddCard extends StatelessWidget {
               const Spacer(),
               Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 3),
-              Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
             ],
           ),
         ),
@@ -482,9 +593,17 @@ class _ShareHintSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inbox_rounded, size: 50, color: Theme.of(context).colorScheme.primary),
+            Icon(
+              Icons.inbox_rounded,
+              size: 50,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             const SizedBox(height: 14),
-            Text('Share straight into your Inbox', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+            Text(
+              'Share straight into your Inbox',
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 8),
             const Text(
               'In WhatsApp, Gallery, Files or another app: tap Share → Study App. One or many files are copied into Inbox. Open Inbox later and move them into any semester, subject, GATE, project or custom folder.',
@@ -515,7 +634,12 @@ Future<void> showEntryActions(
             child: Row(
               children: [
                 Expanded(
-                  child: Text(entry.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  child: Text(
+                    entry.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
               ],
             ),
@@ -524,10 +648,46 @@ Future<void> showEntryActions(
             ListTile(
               leading: const Icon(Icons.ios_share_rounded),
               title: const Text('Share'),
-              subtitle: const Text('Send this material to another app or person'),
+              subtitle: const Text(
+                'Send this material to another app or person',
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 controller.shareEntry(entry);
+              },
+            ),
+          ListTile(
+            leading: Icon(
+              controller.isFavorite(entry.path)
+                  ? Icons.star_rounded
+                  : Icons.star_outline_rounded,
+            ),
+            title: Text(
+              controller.isFavorite(entry.path)
+                  ? 'Remove from favorites'
+                  : 'Add to favorites',
+            ),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              controller.toggleFavorite(entry);
+            },
+          ),
+          if (entry.isDirectory)
+            ListTile(
+              leading: Icon(
+                controller.isPinned(entry.path)
+                    ? Icons.push_pin_rounded
+                    : Icons.push_pin_outlined,
+              ),
+              title: Text(
+                controller.isPinned(entry.path) ? 'Unpin folder' : 'Pin folder',
+              ),
+              subtitle: const Text(
+                'Pinned folders appear in the desktop sidebar',
+              ),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                controller.togglePin(entry);
               },
             ),
           ListTile(
@@ -548,8 +708,14 @@ Future<void> showEntryActions(
             },
           ),
           ListTile(
-            leading: Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.error),
-            title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            leading: Icon(
+              Icons.delete_outline_rounded,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            title: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             onTap: () {
               Navigator.pop(sheetContext);
               _deleteDialog(context, controller, entry);
@@ -561,12 +727,143 @@ Future<void> showEntryActions(
   );
 }
 
+enum _EntryContextAction { open, favorite, pin, rename, move, copyPath, delete }
+
+Future<void> showEntryContextMenu(
+  BuildContext context,
+  LibraryController controller,
+  LibraryEntry entry,
+  Offset position, {
+  required VoidCallback onOpen,
+}) async {
+  final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+  final action = await showMenu<_EntryContextAction>(
+    context: context,
+    position: RelativeRect.fromRect(
+      Rect.fromLTWH(position.dx, position.dy, 1, 1),
+      Offset.zero & overlay.size,
+    ),
+    items: [
+      PopupMenuItem(
+        value: _EntryContextAction.open,
+        child: ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(
+            entry.isDirectory
+                ? Icons.folder_open_rounded
+                : Icons.open_in_new_rounded,
+          ),
+          title: const Text('Open'),
+        ),
+      ),
+      PopupMenuItem(
+        value: _EntryContextAction.favorite,
+        child: ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(
+            controller.isFavorite(entry.path)
+                ? Icons.star_rounded
+                : Icons.star_outline_rounded,
+          ),
+          title: Text(
+            controller.isFavorite(entry.path) ? 'Remove favorite' : 'Favorite',
+          ),
+        ),
+      ),
+      if (entry.isDirectory)
+        PopupMenuItem(
+          value: _EntryContextAction.pin,
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              controller.isPinned(entry.path)
+                  ? Icons.push_pin_rounded
+                  : Icons.push_pin_outlined,
+            ),
+            title: Text(
+              controller.isPinned(entry.path) ? 'Unpin' : 'Pin to sidebar',
+            ),
+          ),
+        ),
+      const PopupMenuDivider(),
+      const PopupMenuItem(
+        value: _EntryContextAction.rename,
+        child: ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.drive_file_rename_outline),
+          title: Text('Rename'),
+        ),
+      ),
+      const PopupMenuItem(
+        value: _EntryContextAction.move,
+        child: ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.drive_file_move_outline),
+          title: Text('Move to…'),
+        ),
+      ),
+      const PopupMenuItem(
+        value: _EntryContextAction.copyPath,
+        child: ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.content_copy_rounded),
+          title: Text('Copy library path'),
+        ),
+      ),
+      const PopupMenuDivider(),
+      PopupMenuItem(
+        value: _EntryContextAction.delete,
+        child: ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(
+            Icons.delete_outline_rounded,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          title: Text(
+            'Delete',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+      ),
+    ],
+  );
+  if (!context.mounted || action == null) return;
+  switch (action) {
+    case _EntryContextAction.open:
+      onOpen();
+    case _EntryContextAction.favorite:
+      await controller.toggleFavorite(entry);
+    case _EntryContextAction.pin:
+      await controller.togglePin(entry);
+    case _EntryContextAction.rename:
+      await _renameDialog(context, controller, entry);
+    case _EntryContextAction.move:
+      await _moveSingle(context, controller, entry);
+    case _EntryContextAction.copyPath:
+      await Clipboard.setData(ClipboardData(text: entry.path));
+      controller.showNotice('Library path copied.');
+    case _EntryContextAction.delete:
+      await _deleteDialog(context, controller, entry);
+  }
+}
+
 Future<void> _newFolderDialog(
   BuildContext context,
   LibraryController controller, {
   required String parent,
 }) async {
-  final value = await _askForName(context, title: 'New folder', hint: 'e.g. Operating Systems');
+  final value = await _askForName(
+    context,
+    title: 'New folder',
+    hint: 'e.g. Operating Systems',
+  );
   if (value != null) await controller.createFolderAt(parent, value);
 }
 
@@ -588,8 +885,14 @@ Future<String?> _askForName(
         onSubmitted: (value) => Navigator.pop(dialogContext, value),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(dialogContext, input.text), child: const Text('Create')),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, input.text),
+          child: const Text('Create'),
+        ),
       ],
     ),
   );
@@ -610,27 +913,47 @@ Future<void> _newNoteSheet(
     isScrollControlled: true,
     useSafeArea: true,
     builder: (sheetContext) => Padding(
-      padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.viewInsetsOf(sheetContext).bottom + 20),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        MediaQuery.viewInsetsOf(sheetContext).bottom + 20,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Quick note', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+          Text(
+            'Quick note',
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 5),
-          Text('Saved in ${destination.isEmpty ? 'Library root' : destination}', style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            'Saved in ${destination.isEmpty ? 'Library root' : destination}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: 14),
-          TextField(controller: title, autofocus: true, decoration: const InputDecoration(hintText: 'Title')),
+          TextField(
+            controller: title,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Title'),
+          ),
           const SizedBox(height: 10),
           TextField(
             controller: body,
             minLines: 6,
             maxLines: 12,
-            decoration: const InputDecoration(hintText: 'Write anything… Markdown is supported.'),
+            decoration: const InputDecoration(
+              hintText: 'Write anything… Markdown is supported.',
+            ),
           ),
           const SizedBox(height: 14),
           FilledButton.icon(
             onPressed: () async {
-              final noteTitle = title.text.trim().isEmpty ? 'Untitled note' : title.text;
+              final noteTitle = title.text.trim().isEmpty
+                  ? 'Untitled note'
+                  : title.text;
               final noteBody = body.text;
               Navigator.pop(sheetContext);
               await controller.createNoteAt(destination, noteTitle, noteBody);
@@ -658,8 +981,14 @@ Future<void> _renameDialog(
       title: const Text('Rename'),
       content: TextField(controller: input, autofocus: true),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(dialogContext, input.text), child: const Text('Rename')),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, input.text),
+          child: const Text('Rename'),
+        ),
       ],
     ),
   );
@@ -698,9 +1027,20 @@ Future<String?> _pickDestination(
   final blocked = <String>{};
   for (final entry in entries.where((entry) => entry.isDirectory)) {
     blocked.add(entry.path);
-    blocked.addAll(controller.folderPaths.where((path) => path.startsWith('${entry.path}/')));
+    blocked.addAll(
+      controller.folderPaths.where((path) => path.startsWith('${entry.path}/')),
+    );
   }
-  final folders = controller.folderPaths.where((path) => !blocked.contains(path)).toList();
+  final available = controller.folderPaths
+      .where((path) => !blocked.contains(path))
+      .toList();
+  final recent = controller.metadata.recentDestinations
+      .where(available.contains)
+      .toList();
+  final folders = [
+    ...recent,
+    ...available.where((path) => !recent.contains(path)),
+  ];
   String query = '';
 
   return showModalBottomSheet<String>(
@@ -712,7 +1052,9 @@ Future<String?> _pickDestination(
         final normalized = query.trim().toLowerCase();
         final filtered = folders.where((path) {
           if (normalized.isEmpty) return true;
-          return (path.isEmpty ? 'library root' : path).toLowerCase().contains(normalized);
+          return (path.isEmpty ? 'library root' : path).toLowerCase().contains(
+            normalized,
+          );
         }).toList();
         return SizedBox(
           height: MediaQuery.sizeOf(context).height * 0.78,
@@ -722,28 +1064,60 @@ Future<String?> _pickDestination(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entries.length == 1 ? 'Move ${entries.first.name}' : 'Move ${entries.length} items',
+                  entries.length == 1
+                      ? 'Move ${entries.first.name}'
+                      : 'Move ${entries.length} items',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 5),
-                const Text('Every nested folder is available as a destination.'),
+                const Text(
+                  'Every nested folder is available as a destination.',
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   onChanged: (value) => setSheetState(() => query = value),
-                  decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Find Semester 5 / DBMS / Notes…'),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search_rounded),
+                    hintText: 'Find Semester 5 / DBMS / Notes…',
+                  ),
                 ),
                 const SizedBox(height: 12),
+                if (query.isEmpty && recent.isNotEmpty) ...[
+                  Text(
+                    'RECENT DESTINATIONS',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.1,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 Expanded(
                   child: ListView.builder(
                     itemCount: filtered.length,
                     itemBuilder: (_, index) {
                       final path = filtered[index];
                       return ListTile(
-                        leading: Icon(path.isEmpty ? Icons.home_rounded : Icons.folder_rounded),
-                        title: Text(path.isEmpty ? 'Library root' : path.split('/').last),
-                        subtitle: path.isEmpty ? null : Text(path, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        leading: Icon(
+                          path.isEmpty
+                              ? Icons.home_rounded
+                              : recent.contains(path)
+                              ? Icons.history_rounded
+                              : Icons.folder_rounded,
+                        ),
+                        title: Text(
+                          path.isEmpty ? 'Library root' : path.split('/').last,
+                        ),
+                        subtitle: path.isEmpty
+                            ? null
+                            : Text(
+                                path,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                         onTap: () => Navigator.pop(sheetContext, path),
                       );
                     },
@@ -773,8 +1147,14 @@ Future<void> _deleteDialog(
             : 'This deletes the file from your library folder.',
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete')),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Delete'),
+        ),
       ],
     ),
   );
@@ -791,10 +1171,18 @@ Future<bool> confirmBulkDelete(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: Text('Delete ${entries.length} items?'),
-      content: const Text('Selected files and folders are permanently removed from your portable library folder.'),
+      content: const Text(
+        'Selected files and folders are permanently removed from your portable library folder.',
+      ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete selected')),
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Delete selected'),
+        ),
       ],
     ),
   );

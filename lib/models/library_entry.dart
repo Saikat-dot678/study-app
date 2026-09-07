@@ -66,15 +66,29 @@ class LibraryEntry {
     if ({'doc', 'docx', 'odt', 'rtf'}.contains(extension)) {
       return LibraryKind.document;
     }
-    if ({'mp3', 'm4a', 'wav', 'aac', 'ogg', 'flac', 'opus'}
-        .contains(extension)) {
+    if ({
+      'mp3',
+      'm4a',
+      'wav',
+      'aac',
+      'ogg',
+      'flac',
+      'opus',
+    }.contains(extension)) {
       return LibraryKind.audio;
     }
     if ({'mp4', 'mkv', 'mov', 'webm', 'avi', 'm4v'}.contains(extension)) {
       return LibraryKind.video;
     }
-    if ({'jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'bmp'}
-        .contains(extension)) {
+    if ({
+      'jpg',
+      'jpeg',
+      'png',
+      'webp',
+      'gif',
+      'heic',
+      'bmp',
+    }.contains(extension)) {
       return LibraryKind.image;
     }
     if ({'zip', 'rar', '7z', 'tar', 'gz'}.contains(extension)) {

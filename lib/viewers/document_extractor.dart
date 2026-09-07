@@ -27,7 +27,12 @@ Future<ExtractedDocument> extractPortableDocument(
   if (ext == 'csv' || ext == 'tsv' || ext == 'rtf') {
     final text = await File(filePath).readAsString();
     return ExtractedDocument(
-      sections: [ExtractedSection(title: 'Document', body: ext == 'rtf' ? _cleanRtf(text) : text)],
+      sections: [
+        ExtractedSection(
+          title: 'Document',
+          body: ext == 'rtf' ? _cleanRtf(text) : text,
+        ),
+      ],
     );
   }
 
@@ -55,10 +60,13 @@ ExtractedDocument _extractDocx(Archive archive) {
 }
 
 ExtractedDocument _extractPptx(Archive archive) {
-  final slides = archive.files
-      .where((file) => RegExp(r'^ppt/slides/slide\d+\.xml$').hasMatch(file.name))
-      .toList()
-    ..sort((a, b) => _numberIn(a.name).compareTo(_numberIn(b.name)));
+  final slides =
+      archive.files
+          .where(
+            (file) => RegExp(r'^ppt/slides/slide\d+\.xml$').hasMatch(file.name),
+          )
+          .toList()
+        ..sort((a, b) => _numberIn(a.name).compareTo(_numberIn(b.name)));
 
   return ExtractedDocument(
     sections: [
@@ -77,7 +85,9 @@ ExtractedDocument _extractXlsx(Archive archive) {
   if (sharedXml != null) {
     try {
       final document = XmlDocument.parse(sharedXml);
-      for (final si in document.descendants.whereType<XmlElement>().where((e) => e.name.local == 'si')) {
+      for (final si in document.descendants.whereType<XmlElement>().where(
+        (e) => e.name.local == 'si',
+      )) {
         shared.add(
           si.descendants
               .whereType<XmlElement>()
@@ -89,10 +99,14 @@ ExtractedDocument _extractXlsx(Archive archive) {
     } catch (_) {}
   }
 
-  final sheets = archive.files
-      .where((file) => RegExp(r'^xl/worksheets/sheet\d+\.xml$').hasMatch(file.name))
-      .toList()
-    ..sort((a, b) => _numberIn(a.name).compareTo(_numberIn(b.name)));
+  final sheets =
+      archive.files
+          .where(
+            (file) =>
+                RegExp(r'^xl/worksheets/sheet\d+\.xml$').hasMatch(file.name),
+          )
+          .toList()
+        ..sort((a, b) => _numberIn(a.name).compareTo(_numberIn(b.name)));
 
   final sections = <ExtractedSection>[];
   for (var index = 0; index < sheets.length; index++) {
@@ -100,17 +114,30 @@ ExtractedDocument _extractXlsx(Archive archive) {
     final rows = <String>[];
     try {
       final document = XmlDocument.parse(text);
-      final rowElements = document.descendants.whereType<XmlElement>().where((e) => e.name.local == 'row');
+      final rowElements = document.descendants.whereType<XmlElement>().where(
+        (e) => e.name.local == 'row',
+      );
       for (final row in rowElements) {
         final values = <String>[];
-        for (final cell in row.children.whereType<XmlElement>().where((e) => e.name.local == 'c')) {
+        for (final cell in row.children.whereType<XmlElement>().where(
+          (e) => e.name.local == 'c',
+        )) {
           final type = cell.getAttribute('t');
-          final valueNode = cell.descendants.whereType<XmlElement>().where((e) => e.name.local == 'v').firstOrNull;
-          final inline = cell.descendants.whereType<XmlElement>().where((e) => e.name.local == 't').map((e) => e.innerText).join();
+          final valueNode = cell.descendants
+              .whereType<XmlElement>()
+              .where((e) => e.name.local == 'v')
+              .firstOrNull;
+          final inline = cell.descendants
+              .whereType<XmlElement>()
+              .where((e) => e.name.local == 't')
+              .map((e) => e.innerText)
+              .join();
           var value = valueNode?.innerText ?? inline;
           if (type == 's') {
             final sharedIndex = int.tryParse(value);
-            if (sharedIndex != null && sharedIndex >= 0 && sharedIndex < shared.length) {
+            if (sharedIndex != null &&
+                sharedIndex >= 0 &&
+                sharedIndex < shared.length) {
               value = shared[sharedIndex];
             }
           }
@@ -123,7 +150,9 @@ ExtractedDocument _extractXlsx(Archive archive) {
     } catch (_) {
       rows.add(_stripMarkup(text));
     }
-    sections.add(ExtractedSection(title: 'Sheet ${index + 1}', body: rows.join('\n')));
+    sections.add(
+      ExtractedSection(title: 'Sheet ${index + 1}', body: rows.join('\n')),
+    );
   }
   return ExtractedDocument(sections: sections);
 }
@@ -141,7 +170,10 @@ ExtractedDocument _extractOdp(Archive archive) {
   if (xml == null) return const ExtractedDocument(sections: []);
   try {
     final document = XmlDocument.parse(xml);
-    final pages = document.descendants.whereType<XmlElement>().where((e) => e.name.local == 'page').toList();
+    final pages = document.descendants
+        .whereType<XmlElement>()
+        .where((e) => e.name.local == 'page')
+        .toList();
     if (pages.isNotEmpty) {
       return ExtractedDocument(
         sections: [
@@ -163,21 +195,22 @@ ExtractedDocument _extractOds(Archive archive) {
   final xml = _readEntry(archive, 'content.xml');
   if (xml == null) return const ExtractedDocument(sections: []);
   return ExtractedDocument(
-    sections: [ExtractedSection(title: 'Spreadsheet', body: _paragraphText(xml))],
+    sections: [
+      ExtractedSection(title: 'Spreadsheet', body: _paragraphText(xml)),
+    ],
   );
 }
 
 ExtractedDocument _extractEpub(Archive archive) {
-  final chapters = archive.files
-      .where((file) {
-        final name = file.name.toLowerCase();
-        return !file.isDirectory &&
-            (name.endsWith('.xhtml') || name.endsWith('.html') || name.endsWith('.htm')) &&
-            !name.contains('nav.') &&
-            !name.contains('toc.');
-      })
-      .toList()
-    ..sort((a, b) => a.name.compareTo(b.name));
+  final chapters = archive.files.where((file) {
+    final name = file.name.toLowerCase();
+    return !file.isDirectory &&
+        (name.endsWith('.xhtml') ||
+            name.endsWith('.html') ||
+            name.endsWith('.htm')) &&
+        !name.contains('nav.') &&
+        !name.contains('toc.');
+  }).toList()..sort((a, b) => a.name.compareTo(b.name));
 
   return ExtractedDocument(
     sections: [
@@ -211,9 +244,16 @@ int _numberIn(String value) {
 String _paragraphText(String source) {
   try {
     final document = XmlDocument.parse(source);
-    final paragraphs = document.descendants.whereType<XmlElement>().where((element) {
+    final paragraphs = document.descendants.whereType<XmlElement>().where((
+      element,
+    ) {
       final name = element.name.local.toLowerCase();
-      return name == 'p' || name == 'h1' || name == 'h2' || name == 'h3' || name == 'li' || name == 'title';
+      return name == 'p' ||
+          name == 'h1' ||
+          name == 'h2' ||
+          name == 'h3' ||
+          name == 'li' ||
+          name == 'title';
     });
     final values = paragraphs
         .map(_textFromElement)
@@ -246,7 +286,9 @@ String _chapterTitle(String source, int fallback) {
   try {
     final document = XmlDocument.parse(source);
     for (final name in ['h1', 'h2', 'title']) {
-      final values = document.descendants.whereType<XmlElement>().where((e) => e.name.local.toLowerCase() == name);
+      final values = document.descendants.whereType<XmlElement>().where(
+        (e) => e.name.local.toLowerCase() == name,
+      );
       if (values.isNotEmpty) {
         final title = _textFromElement(values.first).trim();
         if (title.isNotEmpty) return title;
@@ -258,8 +300,14 @@ String _chapterTitle(String source, int fallback) {
 
 String _stripMarkup(String source) {
   return source
-      .replaceAll(RegExp(r'<script[^>]*>[\s\S]*?</script>', caseSensitive: false), ' ')
-      .replaceAll(RegExp(r'<style[^>]*>[\s\S]*?</style>', caseSensitive: false), ' ')
+      .replaceAll(
+        RegExp(r'<script[^>]*>[\s\S]*?</script>', caseSensitive: false),
+        ' ',
+      )
+      .replaceAll(
+        RegExp(r'<style[^>]*>[\s\S]*?</style>', caseSensitive: false),
+        ' ',
+      )
       .replaceAll(RegExp(r'<[^>]+>'), ' ')
       .replaceAll('&nbsp;', ' ')
       .replaceAll('&amp;', '&')

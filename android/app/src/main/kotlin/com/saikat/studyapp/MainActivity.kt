@@ -60,6 +60,11 @@ class MainActivity : FlutterActivity() {
                             shareEntry(call.argument<String>("path") ?: "")
                             result.success(null)
                         }
+                        "readMetadata" -> result.success(readMetadata())
+                        "writeMetadata" -> {
+                            writeMetadata(call.argument<String>("json") ?: "{}")
+                            result.success(null)
+                        }
                         else -> result.notImplemented()
                     }
                 } catch (error: Exception) {
@@ -357,6 +362,32 @@ class MainActivity : FlutterActivity() {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         startActivity(Intent.createChooser(intent, "Share study material"))
+    }
+
+    private fun metadataFile(create: Boolean): DocumentFile? {
+        val library = root() ?: return null
+        val appDir = library.findFile(".studyapp")
+            ?: if (create) library.createDirectory(".studyapp") else null
+        if (appDir == null) return null
+        return appDir.findFile("state.json")
+            ?: if (create) appDir.createFile("application/json", "state.json") else null
+    }
+
+    private fun readMetadata(): String {
+        val file = metadataFile(false) ?: return "{}"
+        return contentResolver.openInputStream(file.uri)
+            ?.bufferedReader()
+            ?.use { it.readText() }
+            ?: "{}"
+    }
+
+    private fun writeMetadata(json: String) {
+        val file = metadataFile(true)
+            ?: throw IllegalStateException("Could not access Study metadata")
+        contentResolver.openOutputStream(file.uri, "wt")
+            ?.bufferedWriter()
+            ?.use { it.write(json) }
+            ?: throw IllegalStateException("Could not save Study metadata")
     }
 
     private fun copyUriInto(sourceUri: Uri, destination: DocumentFile): String? {

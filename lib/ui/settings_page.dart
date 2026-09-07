@@ -18,12 +18,17 @@ class SettingsPage extends StatelessWidget {
             children: [
               Text(
                 'Settings',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 'Your library stays local, portable and under your control.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 24),
               const _SectionLabel('Storage'),
@@ -40,11 +45,15 @@ class SettingsPage extends StatelessWidget {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Icon(
-                              controller.connected ? Icons.folder_special_rounded : Icons.folder_off_outlined,
+                              controller.connected
+                                  ? Icons.folder_special_rounded
+                                  : Icons.folder_off_outlined,
                               color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
@@ -54,12 +63,18 @@ class SettingsPage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  controller.connected ? controller.libraryName ?? 'Connected folder' : 'No library connected',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                  controller.connected
+                                      ? controller.libraryName ??
+                                            'Connected folder'
+                                      : 'No library connected',
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  controller.connected ? 'Portable library folder' : 'Choose a folder to begin',
+                                  controller.connected
+                                      ? 'Portable library folder'
+                                      : 'Choose a folder to begin',
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
@@ -81,7 +96,11 @@ class SettingsPage extends StatelessWidget {
                           FilledButton.tonalIcon(
                             onPressed: controller.connectLibrary,
                             icon: const Icon(Icons.drive_file_move_outline),
-                            label: Text(controller.connected ? 'Change folder' : 'Connect folder'),
+                            label: Text(
+                              controller.connected
+                                  ? 'Change folder'
+                                  : 'Connect folder',
+                            ),
                           ),
                           if (controller.connected)
                             OutlinedButton.icon(
@@ -100,8 +119,14 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 10),
               const _InfoCard(
                 icon: Icons.play_circle_outline_rounded,
-                title: 'Read and play without leaving Study',
-                body: 'PDFs, Markdown/text, images, audio and video open inside the app. Modern DOCX/PPTX/XLSX, OpenDocument and EPUB files get an offline readable view.',
+                title: 'Resume without leaving Study',
+                body: 'PDFs, audio and video reopen at the saved page or position. Modern documents and EPUB files keep their offline readable view.',
+              ),
+              const SizedBox(height: 10),
+              const _InfoCard(
+                icon: Icons.auto_awesome_rounded,
+                title: 'Portable personal context',
+                body: 'Favorites, pins, recent destinations and reading progress live in .studyapp/state.json beside your library marker. Removing it never removes a study file.',
               ),
               const SizedBox(height: 10),
               const _InfoCard(
@@ -149,10 +174,18 @@ class SettingsPage extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Forget folder connection?'),
-        content: const Text('Study will lose access until you select a folder again. Your files will not be deleted.'),
+        content: const Text(
+          'Study will lose access until you select a folder again. Your files will not be deleted.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Forget')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Forget'),
+          ),
         ],
       ),
     );
@@ -166,12 +199,20 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800));
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.titleMedium
+          ?.copyWith(fontWeight: FontWeight.w800),
+    );
   }
 }
 
 class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.icon, required this.title, required this.body});
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
 
   final IconData icon;
   final String title;
@@ -192,14 +233,21 @@ class _InfoCard extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(icon, size: 21, color: Theme.of(context).colorScheme.primary),
+              child: Icon(
+                icon,
+                size: 21,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             const SizedBox(width: 13),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   const SizedBox(height: 5),
                   Text(body),
                 ],
