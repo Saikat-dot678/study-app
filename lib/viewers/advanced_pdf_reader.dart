@@ -6,7 +6,6 @@ import 'package:pdfrx/pdfrx.dart';
 import '../controllers/library_controller.dart';
 import '../models/library_entry.dart';
 import '../workspace/study_workspace_controller.dart';
-import '../ui/premium_components.dart';
 
 class AdvancedPdfReader extends StatefulWidget {
   const AdvancedPdfReader({
@@ -38,12 +37,6 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
     super.initState();
     final progress = widget.libraryController.progressFor(widget.entry.path);
     currentPage = (progress?.page ?? 1).clamp(1, 1000000);
-  }
-
-  @override
-  void dispose() {
-    viewerController.dispose();
-    super.dispose();
   }
 
   Future<void> _goToPage(int page) async {
@@ -292,7 +285,7 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (thumbnailRail != null) thumbnailRail,
+                  ?thumbnailRail,
                   Expanded(
                     child: PdfViewer.file(
                       widget.path,
@@ -358,6 +351,7 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
                                     currentPage = page.pageNumber;
                                     showAnnotations = true;
                                   });
+                                  return true;
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
@@ -397,7 +391,7 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
                       ),
                     ),
                   ),
-                  if (annotationRail != null) annotationRail,
+                  ?annotationRail,
                 ],
               ),
             ),
@@ -589,7 +583,7 @@ class _ThumbnailRail extends StatelessWidget {
     if (pageCount == 0 || document == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    final builder = (BuildContext context, int index) {
+    Widget builder(BuildContext context, int index) {
       final page = index + 1;
       final selected = page == currentPage;
       return InkWell(
@@ -632,7 +626,8 @@ class _ThumbnailRail extends StatelessWidget {
           ),
         ),
       );
-    };
+    }
+
     return Material(
       color: scheme.surfaceContainerLow.withValues(alpha: 0.82),
       child: Padding(
@@ -817,7 +812,9 @@ class _AnnotationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isHighlight ? 'Highlight • page ${annotation.page}' : 'Note • page ${annotation.page}',
+                      isHighlight
+                          ? 'Highlight • page ${annotation.page}'
+                          : 'Note • page ${annotation.page}',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                         fontWeight: FontWeight.w800,
@@ -826,7 +823,9 @@ class _AnnotationCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       isHighlight
-                          ? (annotation.text.isEmpty ? 'Highlighted text' : annotation.text)
+                          ? (annotation.text.isEmpty
+                                ? 'Highlighted text'
+                                : annotation.text)
                           : annotation.note,
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
