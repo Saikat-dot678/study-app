@@ -263,7 +263,7 @@ class _StudyAudioReaderState extends State<StudyAudioReader> {
                 children: [
                   for (final value in [0.75, 1.0, 1.25, 1.5, 2.0])
                     ChoiceChip(
-                      label: Text('${value}×'),
+                      label: Text('$value×'),
                       selected: speed == value,
                       onSelected: (_) async {
                         speed = value;
@@ -466,7 +466,7 @@ class _StudyVideoReaderState extends State<StudyVideoReader> {
                             onSelected: controller.setPlaybackSpeed,
                             itemBuilder: (_) => [
                               for (final speed in [0.75, 1.0, 1.25, 1.5, 2.0])
-                                PopupMenuItem(value: speed, child: Text('${speed}×')),
+                                PopupMenuItem(value: speed, child: Text('$speed×')),
                             ],
                           ),
                         ],
