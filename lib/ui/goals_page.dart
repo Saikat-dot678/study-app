@@ -33,9 +33,9 @@ class _GoalsPageState extends State<GoalsPage> {
       animation: widget.workspace,
       builder: (context, _) {
         final width = MediaQuery.sizeOf(context).width;
-        final horizontal = width >= 1180 ? 30.0 : width >= 700 ? 24.0 : 16.0;
+        final padding = width >= 1180 ? 30.0 : width >= 700 ? 24.0 : 16.0;
         return ListView(
-          padding: EdgeInsets.fromLTRB(horizontal, 14, horizontal, 130),
+          padding: EdgeInsets.fromLTRB(padding, 14, padding, 120),
           children: [
             Center(
               child: ConstrainedBox(
@@ -62,8 +62,7 @@ class _GoalsPageState extends State<GoalsPage> {
                               focusedDay: focusedDay,
                               format: format,
                               onDaySelected: _selectDay,
-                              onFormatChanged: (value) =>
-                                  setState(() => format = value),
+                              onFormatChanged: (value) => setState(() => format = value),
                               onPageChanged: (value) => focusedDay = value,
                             ),
                           ),
@@ -101,22 +100,17 @@ class _GoalsPageState extends State<GoalsPage> {
                     _SectionTitle(
                       eyebrow: 'OUTCOMES',
                       title: 'Active goals',
-                      subtitle:
-                          'Connect daily work to something larger than a checklist.',
+                      subtitle: 'Connect daily work to something larger than a checklist.',
                       action: 'New goal',
                       onAction: _showGoalSheet,
                     ),
                     const SizedBox(height: 13),
-                    _GoalsGrid(
-                      workspace: widget.workspace,
-                      onAdd: _showGoalSheet,
-                    ),
+                    _GoalsGrid(workspace: widget.workspace, onAdd: _showGoalSheet),
                     const SizedBox(height: 28),
                     const _SectionTitle(
                       eyebrow: 'INSIGHTS',
                       title: 'Your study rhythm',
-                      subtitle:
-                          'Seven days of focus time and completion momentum.',
+                      subtitle: 'Seven days of focus time and completion momentum.',
                     ),
                     const SizedBox(height: 13),
                     _InsightsPanel(workspace: widget.workspace),
@@ -150,7 +144,7 @@ class _GoalsPageState extends State<GoalsPage> {
         builder: (context, setSheetState) {
           final bottom = MediaQuery.viewInsetsOf(context).bottom;
           return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(20, 4, 20, 24 + bottom),
+            padding: EdgeInsets.fromLTRB(20, 6, 20, 24 + bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -158,9 +152,7 @@ class _GoalsPageState extends State<GoalsPage> {
                 const SizedBox(height: 14),
                 Text(
                   'What are you aiming for?',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -192,7 +184,7 @@ class _GoalsPageState extends State<GoalsPage> {
                     prefixIcon: Icon(Icons.timer_outlined),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 _DateSelector(
                   label: 'Target date',
                   value: due,
@@ -251,20 +243,15 @@ class _GoalsPageState extends State<GoalsPage> {
         builder: (context, setSheetState) {
           final bottom = MediaQuery.viewInsetsOf(context).bottom;
           return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(20, 4, 20, 24 + bottom),
+            padding: EdgeInsets.fromLTRB(20, 6, 20, 24 + bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const EyebrowLabel(
-                  icon: Icons.check_circle_rounded,
-                  text: 'New task',
-                ),
+                const EyebrowLabel(icon: Icons.check_circle_rounded, text: 'New task'),
                 const SizedBox(height: 14),
                 Text(
                   'Plan a concrete study block',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -277,36 +264,45 @@ class _GoalsPageState extends State<GoalsPage> {
                   ),
                 ),
                 const SizedBox(height: 11),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: minutes,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Minutes',
-                          prefixIcon: Icon(Icons.timer_outlined),
-                        ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 430;
+                    final minuteField = TextField(
+                      controller: minutes,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Minutes',
+                        prefixIcon: Icon(Icons.timer_outlined),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: DropdownButtonFormField<StudyPriority>(
-                        initialValue: priority,
-                        decoration: const InputDecoration(labelText: 'Priority'),
-                        items: [
-                          for (final value in StudyPriority.values)
-                            DropdownMenuItem(
-                              value: value,
-                              child: Text(_priorityLabel(value)),
-                            ),
+                    );
+                    final priorityField = DropdownButtonFormField<StudyPriority>(
+                      initialValue: priority,
+                      decoration: const InputDecoration(labelText: 'Priority'),
+                      items: [
+                        for (final value in StudyPriority.values)
+                          DropdownMenuItem(value: value, child: Text(_priorityLabel(value))),
+                      ],
+                      onChanged: (value) => setSheetState(
+                        () => priority = value ?? StudyPriority.normal,
+                      ),
+                    );
+                    if (compact) {
+                      return Column(
+                        children: [
+                          minuteField,
+                          const SizedBox(height: 11),
+                          priorityField,
                         ],
-                        onChanged: (value) => setSheetState(
-                          () => priority = value ?? StudyPriority.normal,
-                        ),
-                      ),
-                    ),
-                  ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(child: minuteField),
+                        const SizedBox(width: 10),
+                        Expanded(child: priorityField),
+                      ],
+                    );
+                  },
                 ),
                 if (widget.workspace.activeGoals.isNotEmpty) ...[
                   const SizedBox(height: 11),
@@ -317,17 +313,11 @@ class _GoalsPageState extends State<GoalsPage> {
                       prefixIcon: Icon(Icons.flag_outlined),
                     ),
                     items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('No goal'),
-                      ),
+                      const DropdownMenuItem<String?>(value: null, child: Text('No goal')),
                       for (final goal in widget.workspace.activeGoals)
                         DropdownMenuItem<String?>(
                           value: goal.id,
-                          child: Text(
-                            goal.title,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          child: Text(goal.title, overflow: TextOverflow.ellipsis),
                         ),
                     ],
                     onChanged: (value) => setSheetState(() => goalId = value),
@@ -407,116 +397,122 @@ class _PlannerHero extends StatelessWidget {
     final completed = tasks.where((item) => item.completed).length;
     final fraction = tasks.isEmpty ? 0.0 : completed / tasks.length;
     return GradientBorderCard(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth > 760;
-          final intro = Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const EyebrowLabel(icon: Icons.calendar_month_rounded, text: 'Planner'),
+          const SizedBox(height: 14),
+          Text(
+            'Plan less.\nFinish more.',
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              height: 0.96,
+            ),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            '${workspace.activeGoals.length} active goals • ${workspace.upcomingTasks.length} upcoming tasks',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 9,
+            runSpacing: 9,
+            children: [
+              FilledButton.icon(
+                onPressed: onFocus,
+                icon: const Icon(Icons.timer_rounded),
+                label: const Text('Start focus'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onAddTask,
+                icon: const Icon(Icons.add_task_rounded),
+                label: const Text('Task'),
+              ),
+              TextButton.icon(
+                onPressed: onAddGoal,
+                icon: const Icon(Icons.flag_outlined),
+                label: const Text('Goal'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _HeroMetric(
+                icon: Icons.donut_large_rounded,
+                value: '${(fraction * 100).round()}%',
+                label: 'today complete',
+                accent: scheme.primary,
+              ),
+              _HeroMetric(
+                icon: Icons.check_circle_outline_rounded,
+                value: '$completed/${tasks.length}',
+                label: 'tasks today',
+                accent: scheme.secondary,
+              ),
+              _HeroMetric(
+                icon: Icons.local_fire_department_rounded,
+                value: '${workspace.studyStreak}',
+                label: 'day streak',
+                accent: scheme.tertiary,
+              ),
+              _HeroMetric(
+                icon: Icons.schedule_rounded,
+                value: '${workspace.minutesOn(DateTime.now())}',
+                label: 'focus min today',
+                accent: scheme.primary,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.accent,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 138),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: accent),
+          const SizedBox(width: 8),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const EyebrowLabel(
-                icon: Icons.calendar_month_rounded,
-                text: 'Planner',
-              ),
-              const SizedBox(height: 16),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
               Text(
-                'Plan less.\nFinish more.',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  height: 0.95,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '${workspace.activeGoals.length} active goals • ${workspace.upcomingTasks.length} upcoming tasks',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Wrap(
-                spacing: 9,
-                runSpacing: 9,
-                children: [
-                  FilledButton.icon(
-                    onPressed: onFocus,
-                    icon: const Icon(Icons.timer_rounded),
-                    label: const Text('Start focus'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: onAddTask,
-                    icon: const Icon(Icons.add_task_rounded),
-                    label: const Text('Task'),
-                  ),
-                  TextButton.icon(
-                    onPressed: onAddGoal,
-                    icon: const Icon(Icons.flag_outlined),
-                    label: const Text('Goal'),
-                  ),
-                ],
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ],
-          );
-          final stats = GlassPanel(
-            padding: const EdgeInsets.all(18),
-            tint: scheme.primary.withValues(alpha: 0.065),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                MetricRing(
-                  value: fraction,
-                  size: 94,
-                  center: Text(
-                    '${(fraction * 100).round()}%',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Today',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '$completed / ${tasks.length} tasks',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${workspace.minutesOn(DateTime.now())} focus min',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-          if (!wide) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [intro, const SizedBox(height: 24), stats],
-            );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(child: intro),
-              const SizedBox(width: 24),
-              stats,
-            ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -549,8 +545,7 @@ class _CalendarPanel extends StatelessWidget {
         firstDay: DateTime.now().subtract(const Duration(days: 730)),
         lastDay: DateTime.now().add(const Duration(days: 3650)),
         focusedDay: focusedDay,
-        selectedDayPredicate: (day) =>
-            StudyWorkspaceController.sameDay(day, selectedDay),
+        selectedDayPredicate: (day) => StudyWorkspaceController.sameDay(day, selectedDay),
         calendarFormat: format,
         availableCalendarFormats: const {
           CalendarFormat.month: 'Month',
@@ -576,10 +571,7 @@ class _CalendarPanel extends StatelessWidget {
             color: scheme.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
-          formatButtonTextStyle: TextStyle(
-            color: scheme.primary,
-            fontWeight: FontWeight.w800,
-          ),
+          formatButtonTextStyle: TextStyle(color: scheme.primary, fontWeight: FontWeight.w800),
         ),
         daysOfWeekStyle: DaysOfWeekStyle(
           weekdayStyle: TextStyle(color: scheme.onSurfaceVariant),
@@ -592,22 +584,13 @@ class _CalendarPanel extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: scheme.secondary.withValues(alpha: 0.5)),
           ),
-          todayTextStyle: TextStyle(
-            color: scheme.onSurface,
-            fontWeight: FontWeight.w800,
-          ),
+          todayTextStyle: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w800),
           selectedDecoration: BoxDecoration(
             gradient: LinearGradient(colors: [scheme.primary, scheme.tertiary]),
             shape: BoxShape.circle,
           ),
-          selectedTextStyle: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-          ),
-          markerDecoration: BoxDecoration(
-            color: scheme.secondary,
-            shape: BoxShape.circle,
-          ),
+          selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+          markerDecoration: BoxDecoration(color: scheme.secondary, shape: BoxShape.circle),
           markersMaxCount: 3,
         ),
       ),
@@ -644,15 +627,13 @@ class _AgendaPanel extends StatelessWidget {
                   children: [
                     Text(
                       _fullDate(day),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     Text(
                       '${tasks.length} planned • ${workspace.minutesOn(day)} focus min',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -664,24 +645,17 @@ class _AgendaPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 13),
           if (tasks.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 34),
-              child: Center(
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.event_available_rounded,
-                      size: 44,
-                      color: scheme.primary.withValues(alpha: 0.60),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Nothing scheduled',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 4),
+                    Icon(Icons.event_available_rounded, size: 42, color: scheme.primary.withValues(alpha: 0.60)),
+                    const SizedBox(height: 9),
+                    const Text('Nothing scheduled', style: TextStyle(fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 5),
                     TextButton.icon(
                       onPressed: onAdd,
                       icon: const Icon(Icons.add_task_rounded),
@@ -693,11 +667,7 @@ class _AgendaPanel extends StatelessWidget {
             )
           else
             for (final task in tasks) ...[
-              _TaskTile(
-                task: task,
-                workspace: workspace,
-                onFocus: () => onFocus(task),
-              ),
+              _TaskTile(task: task, workspace: workspace, onFocus: () => onFocus(task)),
               if (task != tasks.last) const SizedBox(height: 8),
             ],
         ],
@@ -707,11 +677,7 @@ class _AgendaPanel extends StatelessWidget {
 }
 
 class _TaskTile extends StatelessWidget {
-  const _TaskTile({
-    required this.task,
-    required this.workspace,
-    required this.onFocus,
-  });
+  const _TaskTile({required this.task, required this.workspace, required this.onFocus});
 
   final StudyTask task;
   final StudyWorkspaceController workspace;
@@ -729,13 +695,10 @@ class _TaskTile extends StatelessWidget {
           : scheme.surfaceContainerHigh.withValues(alpha: 0.55),
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(7, 7, 6, 7),
+        padding: const EdgeInsets.fromLTRB(6, 6, 4, 6),
         child: Row(
           children: [
-            Checkbox(
-              value: task.completed,
-              onChanged: (_) => workspace.toggleTask(task.id),
-            ),
+            Checkbox(value: task.completed, onChanged: (_) => workspace.toggleTask(task.id)),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,30 +709,16 @@ class _TaskTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      decoration: task.completed
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                      color: task.completed
-                          ? scheme.onSurfaceVariant
-                          : scheme.onSurface,
+                      decoration: task.completed ? TextDecoration.lineThrough : TextDecoration.none,
+                      color: task.completed ? scheme.onSurfaceVariant : scheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      _PriorityDot(priority: task.priority),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          '${task.estimatedMinutes} min${goal == null ? '' : ' • ${goal.title}'}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    '${task.estimatedMinutes} min${goal == null ? '' : ' • ${goal.title}'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -777,6 +726,7 @@ class _TaskTile extends StatelessWidget {
             if (!task.completed)
               IconButton(
                 tooltip: 'Focus on this',
+                visualDensity: VisualDensity.compact,
                 onPressed: onFocus,
                 icon: const Icon(Icons.timer_outlined),
               ),
@@ -795,26 +745,6 @@ class _TaskTile extends StatelessWidget {
   }
 }
 
-class _PriorityDot extends StatelessWidget {
-  const _PriorityDot({required this.priority});
-  final StudyPriority priority;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = switch (priority) {
-      StudyPriority.low => scheme.secondary,
-      StudyPriority.normal => scheme.primary,
-      StudyPriority.high => scheme.error,
-    };
-    return Container(
-      width: 7,
-      height: 7,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
 class _GoalsGrid extends StatelessWidget {
   const _GoalsGrid({required this.workspace, required this.onAdd});
 
@@ -824,40 +754,41 @@ class _GoalsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final goals = workspace.activeGoals;
-    final width = MediaQuery.sizeOf(context).width;
-    final columns = width > 1120 ? 3 : width > 680 ? 2 : 1;
     if (goals.isEmpty) {
       return GlassPanel(
         onTap: onAdd,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 22),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 9,
+            runSpacing: 7,
             children: [
               const Icon(Icons.add_circle_outline_rounded),
-              const SizedBox(width: 9),
               Text(
                 'Create your first goal',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
               ),
             ],
           ),
         ),
       );
     }
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: columns,
-      mainAxisSpacing: 11,
-      crossAxisSpacing: 11,
-      childAspectRatio: columns == 1 ? 2.05 : 1.45,
-      children: [
-        for (final goal in goals)
-          _GoalCard(goal: goal, workspace: workspace),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth > 1040 ? 3 : constraints.maxWidth > 650 ? 2 : 1;
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: columns,
+          mainAxisSpacing: 11,
+          crossAxisSpacing: 11,
+          childAspectRatio: columns == 1 ? 1.65 : 1.35,
+          children: [for (final goal in goals) _GoalCard(goal: goal, workspace: workspace)],
+        );
+      },
     );
   }
 }
@@ -873,6 +804,7 @@ class _GoalCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final progress = workspace.goalProgress(goal);
     final linked = workspace.tasks.where((item) => item.goalId == goal.id).toList();
+    final done = linked.where((item) => item.completed).length;
     final days = StudyWorkspaceController.dateOnly(goal.dueDate)
         .difference(StudyWorkspaceController.dateOnly(DateTime.now()))
         .inDays;
@@ -885,15 +817,9 @@ class _GoalCard extends StatelessWidget {
             children: [
               MetricRing(
                 value: progress,
-                size: 62,
+                size: 58,
                 strokeWidth: 6,
-                center: Text(
-                  '${(progress * 100).round()}%',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+                center: Text('${(progress * 100).round()}%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900)),
               ),
               const Spacer(),
               PopupMenuButton<String>(
@@ -902,10 +828,7 @@ class _GoalCard extends StatelessWidget {
                   if (value == 'delete') workspace.deleteGoal(goal.id);
                 },
                 itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'complete',
-                    child: Text('Mark complete'),
-                  ),
+                  PopupMenuItem(value: 'complete', child: Text('Mark complete')),
                   PopupMenuItem(value: 'delete', child: Text('Delete goal')),
                 ],
               ),
@@ -916,49 +839,60 @@ class _GoalCard extends StatelessWidget {
             goal.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
           ),
           if (goal.description.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               goal.description,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
-          const SizedBox(height: 10),
-          Row(
+          const SizedBox(height: 9),
+          Wrap(
+            spacing: 8,
+            runSpacing: 5,
             children: [
-              Icon(Icons.event_rounded, size: 15, color: scheme.primary),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  days < 0
-                      ? '${-days}d overdue'
-                      : days == 0
-                      ? 'Due today'
-                      : '$days days left',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: days < 0 ? scheme.error : scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+              _MiniLabel(
+                icon: Icons.event_rounded,
+                text: days < 0 ? '${-days}d overdue' : days == 0 ? 'Due today' : '$days days left',
+                color: days < 0 ? scheme.error : scheme.primary,
               ),
-              Text(
-                '${linked.where((item) => item.completed).length}/${linked.length} tasks',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+              _MiniLabel(
+                icon: Icons.check_circle_outline_rounded,
+                text: '$done/${linked.length} tasks',
+                color: scheme.secondary,
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniLabel extends StatelessWidget {
+  const _MiniLabel({required this.icon, required this.text, required this.color});
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(text, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -973,21 +907,15 @@ class _InsightsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = StudyWorkspaceController.dateOnly(DateTime.now());
-    final days = List<DateTime>.generate(
-      7,
-      (index) => now.subtract(Duration(days: 6 - index)),
-    );
+    final days = List<DateTime>.generate(7, (index) => now.subtract(Duration(days: 6 - index)));
     final minutes = [for (final day in days) workspace.minutesOn(day)];
-    final maxMinutes = minutes.fold<int>(
-      30,
-      (value, item) => item > value ? item : value,
-    );
+    final maxMinutes = minutes.fold<int>(30, (value, item) => item > value ? item : value);
     return GlassPanel(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth > 760;
-          final chart = SizedBox(
-            height: 180,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 175,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -1002,42 +930,21 @@ class _InsightsPanel extends StatelessWidget {
                   ),
               ],
             ),
-          );
-          final stats = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              _InsightNumber(
-                value: '${workspace.minutesThisWeek}',
-                label: 'minutes this week',
-              ),
-              const SizedBox(height: 15),
-              _InsightNumber(
-                value: '${workspace.studyStreak}',
-                label: 'day streak',
-              ),
-              const SizedBox(height: 15),
-              _InsightNumber(
-                value:
-                    '${workspace.tasks.where((item) => item.completed).length}',
+              _InsightChip(value: '${workspace.minutesThisWeek}', label: 'minutes this week'),
+              _InsightChip(value: '${workspace.studyStreak}', label: 'day streak'),
+              _InsightChip(
+                value: '${workspace.tasks.where((item) => item.completed).length}',
                 label: 'tasks completed',
               ),
             ],
-          );
-          if (!wide) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [chart, const SizedBox(height: 20), stats],
-            );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(flex: 3, child: chart),
-              const SizedBox(width: 28),
-              Expanded(child: stats),
-            ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -1059,25 +966,24 @@ class _DayBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final height = minutes == 0 ? 5.0 : 18 + (minutes / maxMinutes) * 110;
+    final height = minutes == 0 ? 5.0 : 18 + (minutes / maxMinutes) * 100;
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Text(
-          minutes == 0 ? '' : '$minutes',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: scheme.onSurfaceVariant,
+        FittedBox(
+          child: Text(
+            minutes == 0 ? '' : '$minutes',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 4),
         Tooltip(
-          message:
-              '$minutes focus minutes • ${(completion * 100).round()}% tasks done',
+          message: '$minutes focus minutes • ${(completion * 100).round()}% tasks done',
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 5),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
             height: height,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(8),
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
@@ -1086,7 +992,7 @@ class _DayBar extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 7),
+        const SizedBox(height: 6),
         Text(
           _weekday(day.weekday),
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -1099,8 +1005,8 @@ class _DayBar extends StatelessWidget {
   }
 }
 
-class _InsightNumber extends StatelessWidget {
-  const _InsightNumber({required this.value, required this.label});
+class _InsightChip extends StatelessWidget {
+  const _InsightChip({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -1108,24 +1014,20 @@ class _InsightNumber extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
+    return Container(
+      constraints: const BoxConstraints(minWidth: 138),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+        ],
+      ),
     );
   }
 }
@@ -1208,21 +1110,21 @@ class _FocusDialogState extends State<_FocusDialog> {
     final fraction = totalSeconds == 0 ? 0.0 : remainingSeconds / totalSeconds;
     final minutes = remainingSeconds ~/ 60;
     final seconds = remainingSeconds % 60;
+    final size = MediaQuery.sizeOf(context);
+    final ringSize = size.width < 380 ? 160.0 : 200.0;
     return Dialog(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(22),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
-                  const EyebrowLabel(
-                    icon: Icons.center_focus_strong,
-                    text: 'Focus',
+                  const Expanded(
+                    child: EyebrowLabel(icon: Icons.center_focus_strong, text: 'Focus'),
                   ),
-                  const Spacer(),
                   IconButton(
                     tooltip: 'Close and save elapsed time',
                     onPressed: _finish,
@@ -1230,24 +1132,24 @@ class _FocusDialogState extends State<_FocusDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
               Text(
                 widget.task?.title ?? 'Deep work',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
               SizedBox.square(
-                dimension: 210,
+                dimension: ringSize,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     SizedBox.expand(
                       child: CircularProgressIndicator(
                         value: fraction,
-                        strokeWidth: 10,
+                        strokeWidth: 9,
                         strokeCap: StrokeCap.round,
                         backgroundColor: scheme.onSurface.withValues(alpha: 0.06),
                       ),
@@ -1255,29 +1157,25 @@ class _FocusDialogState extends State<_FocusDialog> {
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1.5,
+                        FittedBox(
+                          child: Text(
+                            '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1.5,
+                            ),
                           ),
                         ),
                         Text(
-                          completed
-                              ? 'session complete'
-                              : running
-                              ? 'stay with it'
-                              : 'ready',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
+                          completed ? 'session complete' : running ? 'stay with it' : 'ready',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
               if (!running && remainingSeconds == totalSeconds)
                 Wrap(
                   spacing: 7,
@@ -1292,7 +1190,7 @@ class _FocusDialogState extends State<_FocusDialog> {
                       ),
                   ],
                 ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               Wrap(
                 spacing: 9,
                 runSpacing: 9,
@@ -1301,16 +1199,12 @@ class _FocusDialogState extends State<_FocusDialog> {
                   if (!completed)
                     FilledButton.icon(
                       onPressed: _toggle,
-                      icon: Icon(
-                        running ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                      ),
+                      icon: Icon(running ? Icons.pause_rounded : Icons.play_arrow_rounded),
                       label: Text(running ? 'Pause' : 'Start'),
                     ),
                   OutlinedButton.icon(
                     onPressed: _finish,
-                    icon: Icon(
-                      completed ? Icons.check_rounded : Icons.stop_rounded,
-                    ),
+                    icon: Icon(completed ? Icons.check_rounded : Icons.stop_rounded),
                     label: Text(completed ? 'Save' : 'Finish'),
                   ),
                 ],
@@ -1324,11 +1218,7 @@ class _FocusDialogState extends State<_FocusDialog> {
 }
 
 class _DateSelector extends StatelessWidget {
-  const _DateSelector({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
+  const _DateSelector({required this.label, required this.value, required this.onTap});
 
   final String label;
   final DateTime value;
@@ -1357,6 +1247,8 @@ class _DateSelector extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       _fullDate(value),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ],
@@ -1389,41 +1281,52 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                eyebrow,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.primary,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+        Text(
+          eyebrow,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.primary,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
           ),
         ),
-        if (action != null && onAction != null)
-          TextButton(onPressed: onAction, child: Text(action!)),
+        const SizedBox(height: 4),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
       ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              text,
+              if (action != null && onAction != null) ...[
+                const SizedBox(height: 5),
+                TextButton(onPressed: onAction, child: Text(action!)),
+              ],
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(child: text),
+            if (action != null && onAction != null)
+              TextButton(onPressed: onAction, child: Text(action!)),
+          ],
+        );
+      },
     );
   }
 }
@@ -1447,18 +1350,8 @@ String _weekday(int value) => switch (value) {
 String _fullDate(DateTime value) {
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
   return '${weekdays[value.weekday - 1]}, ${value.day} ${months[value.month - 1]}';
 }
