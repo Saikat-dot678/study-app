@@ -112,7 +112,7 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (rail != null) rail,
+                    ?rail,
                     Expanded(
                       child: _SectionCanvas(
                         key: ValueKey('${widget.entry.path}:$currentSection'),
@@ -123,7 +123,7 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
                         isBook: isBook,
                       ),
                     ),
-                    if (noteRail != null) noteRail,
+                    ?noteRail,
                   ],
                 ),
               ),
