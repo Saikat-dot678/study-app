@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:archive/archive.dart';
+import 'package:path/path.dart' as p;
 import 'package:xml/xml.dart';
 
 class ExtractedSection {
@@ -22,7 +24,18 @@ class ExtractedDocument {
 Future<ExtractedDocument> extractPortableDocument(
   String filePath,
   String extension,
+) => Isolate.run(() => _extractPortableDocument(filePath, extension));
+
+Future<ExtractedDocument> _extractPortableDocument(
+  String filePath,
+  String extension,
 ) async {
+  const previewLimit = 128 * 1024 * 1024;
+  if (await File(filePath).length() > previewLimit) {
+    throw StateError(
+      'This document is too large for a text preview. Open it in another app.',
+    );
+  }
   final ext = extension.toLowerCase();
   if (ext == 'csv' || ext == 'tsv' || ext == 'rtf') {
     final text = await File(filePath).readAsString();
@@ -37,7 +50,14 @@ Future<ExtractedDocument> extractPortableDocument(
   }
 
   final bytes = await File(filePath).readAsBytes();
+  if (bytes.length < 4 || bytes[0] != 0x50 || bytes[1] != 0x4b) {
+    throw const FormatException('This document is not a readable archive.');
+  }
   final archive = ZipDecoder().decodeBytes(bytes);
+  if (archive.files.fold<int>(0, (sum, file) => sum + file.size) >
+      previewLimit) {
+    throw StateError('This expanded document is too large for a text preview.');
+  }
 
   return switch (ext) {
     'docx' => _extractDocx(archive),
@@ -202,7 +222,7 @@ ExtractedDocument _extractOds(Archive archive) {
 }
 
 ExtractedDocument _extractEpub(Archive archive) {
-  final chapters = archive.files.where((file) {
+  var chapters = archive.files.where((file) {
     final name = file.name.toLowerCase();
     return !file.isDirectory &&
         (name.endsWith('.xhtml') ||
@@ -211,6 +231,49 @@ ExtractedDocument _extractEpub(Archive archive) {
         !name.contains('nav.') &&
         !name.contains('toc.');
   }).toList()..sort((a, b) => a.name.compareTo(b.name));
+
+  try {
+    final container = _readEntry(archive, 'META-INF/container.xml');
+    final packagePath = container == null
+        ? null
+        : XmlDocument.parse(container).descendants
+              .whereType<XmlElement>()
+              .where((e) => e.name.local == 'rootfile')
+              .firstOrNull
+              ?.getAttribute('full-path');
+    final package = packagePath == null
+        ? null
+        : _readEntry(archive, packagePath);
+    if (package != null) {
+      final document = XmlDocument.parse(package);
+      final manifest = <String, String>{};
+      for (final element in document.descendants.whereType<XmlElement>().where(
+        (e) => e.name.local == 'item',
+      )) {
+        final id = element.getAttribute('id');
+        final href = element.getAttribute('href');
+        if (id != null && href != null) {
+          manifest[id] = p.posix.normalize(
+            p.posix.join(
+              p.posix.dirname(packagePath!),
+              Uri.decodeComponent(href.split('#').first),
+            ),
+          );
+        }
+      }
+      final byName = {for (final file in chapters) file.name: file};
+      final ordered = <ArchiveFile>[];
+      for (final element in document.descendants.whereType<XmlElement>().where(
+        (e) => e.name.local == 'itemref',
+      )) {
+        final file = byName[manifest[element.getAttribute('idref')]];
+        if (file != null) ordered.add(file);
+      }
+      if (ordered.isNotEmpty) chapters = ordered;
+    }
+  } catch (_) {
+    // Damaged package: retain the readable filename-order fallback.
+  }
 
   return ExtractedDocument(
     sections: [
