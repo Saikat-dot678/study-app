@@ -1,15 +1,19 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/library_controller.dart';
+import '../workspace/study_workspace_controller.dart';
 import 'actions.dart';
 import 'command_center.dart';
-import 'home_page.dart';
+import 'goals_page.dart';
 import 'library_page.dart';
+import 'premium_components.dart';
 import 'search_page.dart';
 import 'settings_page.dart';
+import 'study_dashboard.dart';
 
 class StudyShell extends StatefulWidget {
   const StudyShell({super.key});
@@ -20,12 +24,14 @@ class StudyShell extends StatefulWidget {
 
 class _StudyShellState extends State<StudyShell> {
   late final LibraryController controller;
+  final workspace = StudyWorkspaceController.instance;
   int pageIndex = 0;
 
   @override
   void initState() {
     super.initState();
     controller = LibraryController()..initialize();
+    unawaited(workspace.initialize());
   }
 
   @override
@@ -34,29 +40,47 @@ class _StudyShellState extends State<StudyShell> {
     super.dispose();
   }
 
+  void _selectPage(int value) {
+    if (value < 0 || value > 4) return;
+    setState(() => pageIndex = value);
+  }
+
   void _openLibrary([String? path]) {
-    if (path != null) controller.openFolder(path);
+    if (path != null) unawaited(controller.openFolder(path));
     setState(() => pageIndex = 1);
   }
 
-  void _openSearch() => setState(() => pageIndex = 2);
+  void _openGoals() => setState(() => pageIndex = 2);
+  void _openSearch() => setState(() => pageIndex = 3);
 
   void _openCommandCenter() => showCommandCenter(
     context,
     controller,
-    navigate: _selectPage,
+    navigate: (value) {
+      // The existing command center knows Home/Library/Search/Settings.
+      // Translate its legacy indices into the new five-zone shell.
+      final mapped = switch (value) {
+        0 => 0,
+        1 => 1,
+        2 => 3,
+        3 => 4,
+        _ => value,
+      };
+      _selectPage(mapped);
+    },
     openFolder: (path) => _openLibrary(path),
   );
 
-  void _selectPage(int value) => setState(() => pageIndex = value);
-
   List<Widget> _pages() => [
-    HomePage(
+    StudyDashboard(
       controller: controller,
+      workspace: workspace,
       openLibrary: _openLibrary,
       openSearch: _openSearch,
+      openGoals: _openGoals,
     ),
     LibraryPage(controller: controller),
+    GoalsPage(workspace: workspace),
     SearchPage(controller: controller, openLibrary: _openLibrary),
     SettingsPage(controller: controller),
   ];
@@ -64,14 +88,19 @@ class _StudyShellState extends State<StudyShell> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: Listenable.merge([controller, workspace]),
       builder: (context, _) {
         if (!controller.initialized) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                NebulaBackdrop(),
+                Center(child: CircularProgressIndicator()),
+              ],
+            ),
           );
         }
-
         return CallbackShortcuts(
           bindings: {
             const SingleActivator(LogicalKeyboardKey.keyK, control: true):
@@ -84,16 +113,17 @@ class _StudyShellState extends State<StudyShell> {
                 _selectPage(1),
             const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () =>
                 _selectPage(2),
+            const SingleActivator(LogicalKeyboardKey.digit4, alt: true): () =>
+                _selectPage(3),
+            const SingleActivator(LogicalKeyboardKey.digit5, alt: true): () =>
+                _selectPage(4),
           },
           child: Focus(
             autofocus: true,
             child: LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth >= 980) {
-                  return _buildDesktop(context);
-                }
-                return _buildCompact(context);
-              },
+              builder: (context, constraints) => constraints.maxWidth >= 1020
+                  ? _desktop(context)
+                  : _compact(context),
             ),
           ),
         );
@@ -101,22 +131,25 @@ class _StudyShellState extends State<StudyShell> {
     );
   }
 
-  Widget _buildDesktop(BuildContext context) {
+  Widget _desktop(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          const _AmbientBackdrop(),
+          const NebulaBackdrop(),
           SafeArea(
             child: Row(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 0, 14),
-                  child: _DesktopSidebar(
+                  padding: const EdgeInsets.fromLTRB(15, 15, 0, 15),
+                  child: _Sidebar(
                     selectedIndex: pageIndex,
                     controller: controller,
+                    workspace: workspace,
                     onSelected: _selectPage,
-                    onOpenFolder: (path) => _openLibrary(path),
+                    onOpenFolder: _openLibrary,
                     onAdd: controller.connected
                         ? () => showAddSheet(
                             context,
@@ -128,38 +161,45 @@ class _StudyShellState extends State<StudyShell> {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                    padding: const EdgeInsets.all(15),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(31),
                       child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: scheme.surface.withValues(alpha: 0.82),
-                            borderRadius: BorderRadius.circular(28),
+                            color: scheme.surface.withValues(alpha: 0.74),
+                            borderRadius: BorderRadius.circular(31),
                             border: Border.all(
-                              color: scheme.outlineVariant.withValues(
-                                alpha: 0.42,
-                              ),
+                              color: scheme.outlineVariant.withValues(alpha: 0.38),
                             ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x28000000),
+                                blurRadius: 50,
+                                offset: Offset(0, 20),
+                              ),
+                            ],
                           ),
                           child: Column(
                             children: [
                               _DesktopTopBar(
-                                section: _sectionName(pageIndex),
-                                subtitle: _sectionSubtitle(pageIndex),
+                                title: _title(pageIndex),
+                                subtitle: _subtitle(pageIndex),
                                 connected: controller.connected,
                                 busy: controller.busy,
                                 onSearch: _openCommandCenter,
                                 onRefresh: controller.refresh,
-                                onAdd: () => showAddSheet(
-                                  context,
-                                  controller,
-                                  fromHome: pageIndex == 0,
-                                ),
+                                onAdd: controller.connected
+                                    ? () => showAddSheet(
+                                        context,
+                                        controller,
+                                        fromHome: pageIndex == 0,
+                                      )
+                                    : null,
                               ),
                               _statusArea(),
-                              Expanded(child: _animatedPage()),
+                              Expanded(child: _page()),
                             ],
                           ),
                         ),
@@ -175,79 +215,60 @@ class _StudyShellState extends State<StudyShell> {
     );
   }
 
-  Widget _buildCompact(BuildContext context) {
+  Widget _compact(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: Colors.transparent,
       extendBody: true,
       appBar: AppBar(
-        titleSpacing: 18,
+        titleSpacing: 16,
         flexibleSpace: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: ColoredBox(color: scheme.surface.withValues(alpha: 0.76)),
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: ColoredBox(color: scheme.surface.withValues(alpha: 0.70)),
           ),
         ),
         title: const _Brand(compact: true),
         actions: [
           if (controller.connected)
             IconButton(
-              tooltip: 'Search everything',
-              onPressed: _openSearch,
+              tooltip: 'Search',
+              onPressed: _openCommandCenter,
               icon: const Icon(Icons.search_rounded),
             ),
           if (controller.connected)
             IconButton(
-              tooltip: 'Refresh library',
-              onPressed: controller.busy ? null : controller.refresh,
-              icon: const Icon(Icons.sync_rounded),
+              tooltip: 'Add material',
+              onPressed: () => showAddSheet(
+                context,
+                controller,
+                fromHome: pageIndex == 0,
+              ),
+              icon: const Icon(Icons.add_rounded),
             ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 7),
         ],
       ),
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          const _AmbientBackdrop(),
+          const NebulaBackdrop(),
           Column(
             children: [
               _statusArea(),
-              Expanded(child: _animatedPage()),
+              Expanded(child: _page()),
             ],
           ),
         ],
       ),
-      floatingActionButton: controller.connected && pageIndex <= 1
-          ? DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [scheme.primary, scheme.tertiary],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: scheme.primary.withValues(alpha: 0.28),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: FloatingActionButton.extended(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                onPressed: () =>
-                    showAddSheet(context, controller, fromHome: pageIndex == 0),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add'),
-              ),
-            )
-          : null,
       bottomNavigationBar: SafeArea(
         top: false,
-        minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        minimum: const EdgeInsets.fromLTRB(10, 0, 10, 9),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(26),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-            child: Container(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 color: scheme.surfaceContainer.withValues(alpha: 0.82),
                 borderRadius: BorderRadius.circular(26),
@@ -256,25 +277,31 @@ class _StudyShellState extends State<StudyShell> {
                 ),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x1A000000),
-                    blurRadius: 24,
-                    offset: Offset(0, 10),
+                    color: Color(0x26000000),
+                    blurRadius: 26,
+                    offset: Offset(0, 12),
                   ),
                 ],
               ),
               child: NavigationBar(
+                height: 68,
                 selectedIndex: pageIndex,
                 onDestinationSelected: _selectPage,
                 destinations: const [
                   NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home_rounded),
+                    icon: Icon(Icons.grid_view_rounded),
+                    selectedIcon: Icon(Icons.auto_awesome_mosaic_rounded),
                     label: 'Home',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.folder_outlined),
                     selectedIcon: Icon(Icons.folder_rounded),
                     label: 'Library',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.flag_outlined),
+                    selectedIcon: Icon(Icons.flag_rounded),
+                    label: 'Goals',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.search_rounded),
@@ -296,45 +323,52 @@ class _StudyShellState extends State<StudyShell> {
   }
 
   Widget _statusArea() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          child: controller.error != null
-              ? _StatusStrip(
-                  key: const ValueKey('error'),
-                  text: controller.error!,
-                  error: true,
-                  onDismiss: controller.clearStatus,
-                )
-              : controller.notice != null
-              ? _StatusStrip(
-                  key: const ValueKey('notice'),
-                  text: controller.notice!,
-                  onDismiss: controller.clearStatus,
-                )
-              : const SizedBox.shrink(key: ValueKey('none')),
-        ),
-        if (controller.busy) const LinearProgressIndicator(minHeight: 2),
-      ],
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 220),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: controller.error != null
+                ? _StatusStrip(
+                    key: const ValueKey('error'),
+                    text: controller.error!,
+                    error: true,
+                    onDismiss: controller.clearStatus,
+                  )
+                : controller.notice != null
+                ? _StatusStrip(
+                    key: const ValueKey('notice'),
+                    text: controller.notice!,
+                    onDismiss: controller.clearStatus,
+                  )
+                : const SizedBox.shrink(key: ValueKey('none')),
+          ),
+          if (controller.busy) const LinearProgressIndicator(minHeight: 2),
+        ],
+      ),
     );
   }
 
-  Widget _animatedPage() {
+  Widget _page() {
     final pages = _pages();
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
+      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 330),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeInCubic,
       transitionBuilder: (child, animation) {
-        final slide = Tween<Offset>(
-          begin: const Offset(0.018, 0),
-          end: Offset.zero,
-        ).animate(animation);
+        if (reduceMotion) return child;
         return FadeTransition(
           opacity: animation,
-          child: SlideTransition(position: slide, child: child),
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.018, 0.012),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
         );
       },
       child: KeyedSubtree(key: ValueKey(pageIndex), child: pages[pageIndex]),
@@ -342,10 +376,11 @@ class _StudyShellState extends State<StudyShell> {
   }
 }
 
-class _DesktopSidebar extends StatelessWidget {
-  const _DesktopSidebar({
+class _Sidebar extends StatelessWidget {
+  const _Sidebar({
     required this.selectedIndex,
     required this.controller,
+    required this.workspace,
     required this.onSelected,
     required this.onOpenFolder,
     required this.onAdd,
@@ -353,6 +388,7 @@ class _DesktopSidebar extends StatelessWidget {
 
   final int selectedIndex;
   final LibraryController controller;
+  final StudyWorkspaceController workspace;
   final ValueChanged<int> onSelected;
   final ValueChanged<String> onOpenFolder;
   final VoidCallback? onAdd;
@@ -360,17 +396,17 @@ class _DesktopSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final connected = controller.connected;
+    final nextTask = workspace.upcomingTasks.firstOrNull;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(31),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
         child: Container(
-          width: 244,
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+          width: 252,
+          padding: const EdgeInsets.fromLTRB(15, 19, 15, 15),
           decoration: BoxDecoration(
-            color: scheme.surfaceContainer.withValues(alpha: 0.78),
-            borderRadius: BorderRadius.circular(28),
+            color: scheme.surfaceContainer.withValues(alpha: 0.74),
+            borderRadius: BorderRadius.circular(31),
             border: Border.all(
               color: scheme.outlineVariant.withValues(alpha: 0.42),
             ),
@@ -378,111 +414,125 @@ class _DesktopSidebar extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _Brand(),
-              const SizedBox(height: 26),
-              _DesktopNavItem(
-                icon: Icons.home_rounded,
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 7),
+                child: _Brand(),
+              ),
+              const SizedBox(height: 25),
+              _NavItem(
+                icon: Icons.auto_awesome_mosaic_rounded,
                 label: 'Home',
                 selected: selectedIndex == 0,
                 onTap: () => onSelected(0),
               ),
-              _DesktopNavItem(
+              _NavItem(
                 icon: Icons.folder_rounded,
                 label: 'Library',
                 selected: selectedIndex == 1,
                 onTap: () => onSelected(1),
               ),
-              _DesktopNavItem(
-                icon: Icons.manage_search_rounded,
-                label: 'Search',
+              _NavItem(
+                icon: Icons.flag_rounded,
+                label: 'Goals & Calendar',
                 selected: selectedIndex == 2,
+                badge: workspace.upcomingTasks.isEmpty
+                    ? null
+                    : '${workspace.upcomingTasks.length}',
                 onTap: () => onSelected(2),
               ),
-              _DesktopNavItem(
-                icon: Icons.tune_rounded,
-                label: 'Settings',
+              _NavItem(
+                icon: Icons.manage_search_rounded,
+                label: 'Search',
                 selected: selectedIndex == 3,
                 onTap: () => onSelected(3),
               ),
+              _NavItem(
+                icon: Icons.tune_rounded,
+                label: 'Settings',
+                selected: selectedIndex == 4,
+                onTap: () => onSelected(4),
+              ),
               if (controller.pinnedFolders.isNotEmpty) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 13),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(10, 0, 8, 7),
                   child: Text(
-                    'PINNED',
+                    'PINNED SPACES',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      letterSpacing: 1.1,
                       color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
                     ),
                   ),
                 ),
-                for (final folder in controller.pinnedFolders.take(5))
-                  _DesktopNavItem(
+                for (final folder in controller.pinnedFolders.take(4))
+                  _NavItem(
                     icon: Icons.folder_special_rounded,
                     label: folder.name,
                     selected:
-                        selectedIndex == 1 &&
-                        controller.currentPath == folder.path,
+                        selectedIndex == 1 && controller.currentPath == folder.path,
                     onTap: () => onOpenFolder(folder.path),
                   ),
               ],
-              const SizedBox(height: 18),
-              if (connected)
+              const SizedBox(height: 13),
+              if (controller.connected)
                 FilledButton.icon(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_rounded),
                   label: const Text('Add material'),
                 ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHigh.withValues(alpha: 0.68),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          connected
-                              ? Icons.offline_bolt_rounded
-                              : Icons.folder_off_outlined,
-                          size: 17,
-                          color: connected
-                              ? scheme.primary
-                              : scheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: Text(
-                            connected ? 'Offline library' : 'No library',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
+              if (nextTask != null)
+                GlassPanel(
+                  radius: 18,
+                  blur: 10,
+                  padding: const EdgeInsets.all(13),
+                  tint: scheme.primary.withValues(alpha: 0.07),
+                  onTap: () => onSelected(2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.bolt_rounded, color: scheme.primary, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'NEXT UP',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                            ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        nextTask.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${nextTask.estimatedMinutes} min • ${_shortDate(nextTask.dueDate)}',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      connected
-                          ? (controller.libraryName ?? 'Study Library')
-                          : 'Connect a local folder to begin.',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Alt+1/2/3 • Ctrl+K search',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
+              if (nextTask != null) const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: Text(
+                  'Alt+1–5 • Ctrl+K',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ],
           ),
@@ -492,51 +542,71 @@ class _DesktopSidebar extends StatelessWidget {
   }
 }
 
-class _DesktopNavItem extends StatelessWidget {
-  const _DesktopNavItem({
+class _NavItem extends StatelessWidget {
+  const _NavItem({
     required this.icon,
     required this.label,
     required this.selected,
     required this.onTap,
+    this.badge,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Material(
         color: selected
-            ? scheme.primaryContainer.withValues(alpha: 0.76)
+            ? scheme.primary.withValues(alpha: 0.13)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(15),
         child: InkWell(
-          onTap: onTap,
           borderRadius: BorderRadius.circular(15),
+          onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             child: Row(
               children: [
                 Icon(
                   icon,
-                  size: 20,
+                  size: 19,
                   color: selected ? scheme.primary : scheme.onSurfaceVariant,
                 ),
-                const SizedBox(width: 11),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    color: selected
-                        ? scheme.onPrimaryContainer
-                        : scheme.onSurface,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: selected ? FontWeight.w900 : FontWeight.w650,
+                      color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
+                if (badge != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      badge!,
+                      style: TextStyle(
+                        color: scheme.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -548,7 +618,7 @@ class _DesktopNavItem extends StatelessWidget {
 
 class _DesktopTopBar extends StatelessWidget {
   const _DesktopTopBar({
-    required this.section,
+    required this.title,
     required this.subtitle,
     required this.connected,
     required this.busy,
@@ -557,19 +627,19 @@ class _DesktopTopBar extends StatelessWidget {
     required this.onAdd,
   });
 
-  final String section;
+  final String title;
   final String subtitle;
   final bool connected;
   final bool busy;
   final VoidCallback onSearch;
   final VoidCallback onRefresh;
-  final VoidCallback onAdd;
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 18, 18, 14),
+      padding: const EdgeInsets.fromLTRB(22, 17, 19, 10),
       child: Row(
         children: [
           Expanded(
@@ -577,67 +647,54 @@ class _DesktopTopBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  section,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
-          if (connected) ...[
-            SizedBox(
-              width: 250,
-              child: Material(
-                color: scheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(15),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(15),
-                  onTap: onSearch,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 13,
-                      vertical: 11,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.bolt_rounded,
-                          size: 19,
-                          color: scheme.primary,
-                        ),
-                        const SizedBox(width: 9),
-                        Expanded(
-                          child: Text(
-                            'Command center',
-                            style: TextStyle(color: scheme.onSurfaceVariant),
-                          ),
-                        ),
-                        Text(
-                          'Ctrl K',
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
+          SizedBox(
+            width: 240,
+            child: Material(
+              color: scheme.surfaceContainerLow.withValues(alpha: 0.62),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: onSearch,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search_rounded, size: 19),
+                      SizedBox(width: 8),
+                      Expanded(child: Text('Search or command')),
+                      Text('⌘K', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900)),
+                    ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+          ),
+          const SizedBox(width: 8),
+          if (connected)
             IconButton.filledTonal(
               tooltip: 'Refresh',
               onPressed: busy ? null : onRefresh,
               icon: const Icon(Icons.sync_rounded),
             ),
-            const SizedBox(width: 8),
+          if (connected) ...[
+            const SizedBox(width: 7),
             FilledButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.add_rounded),
@@ -652,155 +709,56 @@ class _DesktopTopBar extends StatelessWidget {
 
 class _Brand extends StatelessWidget {
   const _Brand({this.compact = false});
-
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Row(
-      mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: compact ? 34 : 39,
+          height: compact ? 34 : 39,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(13),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [scheme.primary, scheme.tertiary],
+              colors: [scheme.primary, scheme.secondary, scheme.tertiary],
             ),
             boxShadow: [
               BoxShadow(
-                color: scheme.primary.withValues(alpha: 0.22),
+                color: scheme.primary.withValues(alpha: 0.24),
                 blurRadius: 18,
-                offset: const Offset(0, 7),
               ),
             ],
           ),
-          child: const Icon(
-            Icons.auto_stories_rounded,
-            color: Colors.white,
-            size: 21,
-          ),
+          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
         ),
-        const SizedBox(width: 11),
+        const SizedBox(width: 10),
         Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Study',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-            ),
             Text(
-              'Offline student library',
-              style: Theme.of(context).textTheme.labelSmall
-                  ?.copyWith(color: scheme.onSurfaceVariant),
+              'STUDY',
+              style: TextStyle(
+                fontSize: compact ? 14 : 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.4,
+              ),
             ),
+            if (!compact)
+              Text(
+                'personal learning OS',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
           ],
         ),
       ],
-    );
-  }
-}
-
-String _sectionName(int index) => switch (index) {
-  0 => 'Home',
-  1 => 'Library',
-  2 => 'Search',
-  _ => 'Settings',
-};
-
-String _sectionSubtitle(int index) => switch (index) {
-  0 => 'Everything you need to continue learning.',
-  1 => 'Organize material into folders that make sense to you.',
-  2 => 'Find anything across every folder and format.',
-  _ => 'Storage, portability and app preferences.',
-};
-
-class _AmbientBackdrop extends StatefulWidget {
-  const _AmbientBackdrop();
-
-  @override
-  State<_AmbientBackdrop> createState() => _AmbientBackdropState();
-}
-
-class _AmbientBackdropState extends State<_AmbientBackdrop>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController motion = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 18),
-  );
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      motion.stop();
-      motion.value = 0.5;
-    } else if (!motion.isAnimating) {
-      motion.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    motion.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return IgnorePointer(
-      child: RepaintBoundary(
-        child: AnimatedBuilder(
-          animation: motion,
-          builder: (context, child) => Transform.translate(
-            offset: Offset(18 * motion.value, 10 * (1 - motion.value)),
-            child: child,
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: -120,
-                right: -120,
-                child: Container(
-                  width: 330,
-                  height: 330,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        scheme.primary.withValues(alpha: 0.10),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 80,
-                left: -140,
-                child: Container(
-                  width: 300,
-                  height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        scheme.tertiary.withValues(alpha: 0.07),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -814,30 +772,25 @@ class _StatusStrip extends StatelessWidget {
   });
 
   final String text;
-  final bool error;
   final VoidCallback onDismiss;
+  final bool error;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = error ? scheme.error : scheme.primary;
     return Container(
-      width: double.infinity,
-      color: color.withValues(alpha: 0.08),
-      padding: const EdgeInsets.fromLTRB(18, 9, 8, 9),
+      margin: const EdgeInsets.fromLTRB(18, 2, 18, 6),
+      padding: const EdgeInsets.fromLTRB(12, 7, 5, 7),
+      decoration: BoxDecoration(
+        color: (error ? scheme.errorContainer : scheme.primaryContainer)
+            .withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(13),
+      ),
       child: Row(
         children: [
-          Icon(
-            error
-                ? Icons.error_outline_rounded
-                : Icons.check_circle_outline_rounded,
-            size: 18,
-            color: color,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(text, style: TextStyle(color: color)),
-          ),
+          Icon(error ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
           IconButton(
             visualDensity: VisualDensity.compact,
             onPressed: onDismiss,
@@ -847,4 +800,29 @@ class _StatusStrip extends StatelessWidget {
       ),
     );
   }
+}
+
+String _title(int index) => switch (index) {
+  0 => 'Study OS',
+  1 => 'Library',
+  2 => 'Goals & Calendar',
+  3 => 'Search',
+  _ => 'Settings',
+};
+
+String _subtitle(int index) => switch (index) {
+  0 => 'Your learning momentum, materials and next move.',
+  1 => 'Folders are the source of truth. Organize without limits.',
+  2 => 'Plan outcomes, schedule tasks and protect focus time.',
+  3 => 'Find material across every space in milliseconds.',
+  _ => 'Local library, privacy and app preferences.',
+};
+
+String _shortDate(DateTime value) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return '${value.day} ${months[value.month - 1]}';
+}
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

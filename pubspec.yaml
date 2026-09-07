@@ -1,7 +1,7 @@
 name: study_app
 description: Offline-first student library for notes, books, slides, recordings, videos and shared files.
 publish_to: "none"
-version: 0.3.0+3
+version: 0.4.0+4
 
 environment:
   sdk: ">=3.13.0 <4.0.0"
@@ -21,6 +21,7 @@ dependencies:
   file_picker: ^12.2.0
   shared_preferences: ^2.5.5
   path: ^1.9.1
+  table_calendar: ^3.2.1
 
 dev_dependencies:
   flutter_test:
