@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../controllers/library_controller.dart';
 import '../models/library_entry.dart';
+import 'motion.dart';
 
 class ConnectLibraryView extends StatelessWidget {
   const ConnectLibraryView({super.key, required this.controller});
@@ -23,9 +24,7 @@ class ConnectLibraryView extends StatelessWidget {
         Text(
           'Choose your study library folder',
           textAlign: TextAlign.center,
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
+          style: Theme.of(context).textTheme.headlineSmall
               ?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
@@ -110,6 +109,7 @@ class FileRow extends StatelessWidget {
     this.showPath = false,
     this.trailing,
     this.selected = false,
+    this.onSecondaryTapDown,
   });
 
   final LibraryEntry entry;
@@ -118,31 +118,48 @@ class FileRow extends StatelessWidget {
   final bool showPath;
   final Widget? trailing;
   final bool selected;
+  final GestureTapDownCallback? onSecondaryTapDown;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: selected ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.55) : null,
-      child: ListTile(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-        leading: FileIcon(
-          entry: entry,
-          heroTag: entry.isDirectory ? null : 'entry:${entry.path}',
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${entry.isDirectory ? 'Folder' : 'Material'} ${entry.name}',
+      child: HoverLift(
+        child: GestureDetector(
+          onSecondaryTapDown: onSecondaryTapDown,
+          child: Card(
+            color: selected
+                ? Theme.of(context).colorScheme.primaryContainer
+                      .withValues(alpha: 0.55)
+                : null,
+            child: ListTile(
+              onTap: onTap,
+              onLongPress: onLongPress,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 5,
+              ),
+              leading: FileIcon(
+                entry: entry,
+                heroTag: entry.isDirectory ? null : 'entry:${entry.path}',
+              ),
+              title: Text(
+                entry.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                showPath ? entry.path : fileMeta(entry),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: trailing ?? const Icon(Icons.chevron_right_rounded),
+            ),
+          ),
         ),
-        title: Text(
-          entry.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          showPath ? entry.path : fileMeta(entry),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: trailing ?? const Icon(Icons.chevron_right_rounded),
       ),
     );
   }
@@ -173,9 +190,7 @@ class EmptyCard extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
+              style: Theme.of(context).textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
@@ -201,9 +216,7 @@ class SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
+            style: Theme.of(context).textTheme.titleLarge
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
@@ -219,9 +232,11 @@ String fileMeta(LibraryEntry entry) {
   final size = bytes < 1024
       ? '$bytes B'
       : bytes < 1024 * 1024
-          ? '${(bytes / 1024).toStringAsFixed(1)} KB'
-          : bytes < 1024 * 1024 * 1024
-              ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
-              : '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  return entry.extension.isEmpty ? size : '${entry.extension.toUpperCase()} • $size';
+      ? '${(bytes / 1024).toStringAsFixed(1)} KB'
+      : bytes < 1024 * 1024 * 1024
+      ? '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB'
+      : '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  return entry.extension.isEmpty
+      ? size
+      : '${entry.extension.toUpperCase()} • $size';
 }
