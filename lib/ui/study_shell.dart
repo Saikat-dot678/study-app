@@ -57,8 +57,6 @@ class _StudyShellState extends State<StudyShell> {
     context,
     controller,
     navigate: (value) {
-      // The existing command center knows Home/Library/Search/Settings.
-      // Translate its legacy indices into the new five-zone shell.
       final mapped = switch (value) {
         0 => 0,
         1 => 1,
@@ -586,7 +584,7 @@ class _NavItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontWeight: selected ? FontWeight.w900 : FontWeight.w650,
+                      fontWeight: selected ? FontWeight.w900 : FontWeight.w600,
                       color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
                     ),
                   ),
