@@ -179,48 +179,53 @@ class _HomeHeader extends StatelessWidget {
         : now.hour < 17
         ? 'Good afternoon.'
         : 'Good evening.';
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _longDate(now),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: palette.ambientAccent,
-                  fontWeight: FontWeight.w700,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showStats = constraints.maxWidth >= 840;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _longDate(now),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: palette.ambientAccent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(greeting, style: Theme.of(context).textTheme.headlineLarge),
+                ],
               ),
-              const SizedBox(height: 5),
-              Text(greeting, style: Theme.of(context).textTheme.headlineLarge),
-            ],
-          ),
-        ),
-        if (MediaQuery.sizeOf(context).width >= 720)
-          Row(
-            children: [
-              _HeaderStat(
-                value: '${workspace.minutesThisWeek}',
-                label: 'min this week',
-                color: palette.research,
+            ),
+            if (showStats)
+              Row(
+                children: [
+                  _HeaderStat(
+                    value: '${workspace.minutesThisWeek}',
+                    label: 'min this week',
+                    color: palette.research,
+                  ),
+                  const SizedBox(width: 20),
+                  _HeaderStat(
+                    value: '${workspace.studyStreak}',
+                    label: 'day streak',
+                    color: palette.project,
+                  ),
+                  const SizedBox(width: 20),
+                  _HeaderStat(
+                    value: '${controller.materialCountUnder('')}',
+                    label: 'materials',
+                    color: scheme.primary,
+                  ),
+                ],
               ),
-              const SizedBox(width: 20),
-              _HeaderStat(
-                value: '${workspace.studyStreak}',
-                label: 'day streak',
-                color: palette.project,
-              ),
-              const SizedBox(width: 20),
-              _HeaderStat(
-                value: '${controller.materialCountUnder('')}',
-                label: 'materials',
-                color: scheme.primary,
-              ),
-            ],
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
