@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:study_app/controllers/library_controller.dart';
 import 'package:study_app/models/library_entry.dart';
@@ -43,6 +45,30 @@ void main() {
       expect(storage.metadata['favorites'], contains(file.path));
     },
   );
+
+  test('startup becomes usable before recursive indexing completes', () async {
+    final slowStorage = _SlowIndexStorage();
+    final fastController = LibraryController(bridge: slowStorage);
+    addTearDown(fastController.dispose);
+
+    final startup = fastController.initialize();
+    await slowStorage.searchStarted.future;
+
+    expect(fastController.initialized, isTrue);
+    expect(fastController.connected, isTrue);
+    expect(fastController.busy, isFalse);
+    expect(fastController.entries.single.name, 'Semester 5');
+    expect(fastController.allEntries.single.name, 'Semester 5');
+
+    slowStorage.finishIndex();
+    await startup;
+
+    expect(fastController.allEntries, hasLength(2));
+    expect(
+      fastController.allEntries.map((entry) => entry.name),
+      contains('Normalization.pdf'),
+    );
+  });
 }
 
 class _FakeStorage extends StorageBridge {
@@ -92,5 +118,48 @@ class _FakeStorage extends StorageBridge {
   @override
   Future<void> writeMetadata(Map<String, dynamic> value) async {
     metadata = value;
+  }
+}
+
+class _SlowIndexStorage extends StorageBridge {
+  final searchStarted = Completer<void>();
+  final _searchResult = Completer<List<LibraryEntry>>();
+
+  final root = LibraryEntry(
+    name: 'Semester 5',
+    path: 'Semester 5',
+    isDirectory: true,
+    mime: null,
+    size: 0,
+    lastModified: DateTime(2026),
+  );
+
+  final nested = LibraryEntry(
+    name: 'Normalization.pdf',
+    path: 'Semester 5/DBMS/Normalization.pdf',
+    isDirectory: false,
+    mime: 'application/pdf',
+    size: 100,
+    lastModified: DateTime(2026),
+  );
+
+  @override
+  Future<LibraryState> getState() async =>
+      const LibraryState(connected: true, name: 'Slow test');
+
+  @override
+  Future<List<LibraryEntry>> listEntries(String path) async => [root];
+
+  @override
+  Future<Map<String, dynamic>> readMetadata() async => const {};
+
+  @override
+  Future<List<LibraryEntry>> search(String query) {
+    if (!searchStarted.isCompleted) searchStarted.complete();
+    return _searchResult.future;
+  }
+
+  void finishIndex() {
+    if (!_searchResult.isCompleted) _searchResult.complete([root, nested]);
   }
 }
