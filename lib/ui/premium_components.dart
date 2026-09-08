@@ -61,36 +61,52 @@ class GlassPanel extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius),
       side: BorderSide(color: borderColor ?? scheme.outlineVariant),
     );
-    final childWidget = Padding(padding: padding, child: child);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: glow
-            ? [
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : const [],
-      ),
-      child: Material(
-        color: surface,
-        shape: shape,
-        clipBehavior: Clip.antiAlias,
-        child: onTap == null
-            ? childWidget
-            : InkWell(
-                onTap: onTap,
-                overlayColor: WidgetStateProperty.resolveWith(
-                  (states) => states.contains(WidgetState.hovered)
-                      ? scheme.primary.withValues(alpha: 0.035)
-                      : null,
-                ),
-                child: childWidget,
-              ),
-      ),
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaledBody = MediaQuery.textScalerOf(context).scale(14);
+        final compact = constraints.maxWidth < 340 || scaledBody >= 18;
+        final effectivePadding = compact
+            ? EdgeInsets.fromLTRB(
+                math.min(padding.left, 12),
+                padding.top,
+                math.min(padding.right, 12),
+                padding.bottom,
+              )
+            : padding;
+        final childWidget = Padding(padding: effectivePadding, child: child);
+
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            boxShadow: glow
+                ? [
+                    BoxShadow(
+                      color: scheme.shadow.withValues(alpha: 0.08),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : const [],
+          ),
+          child: Material(
+            color: surface,
+            shape: shape,
+            clipBehavior: Clip.antiAlias,
+            child: onTap == null
+                ? childWidget
+                : InkWell(
+                    onTap: onTap,
+                    overlayColor: WidgetStateProperty.resolveWith(
+                      (states) => states.contains(WidgetState.hovered)
+                          ? scheme.primary.withValues(alpha: 0.035)
+                          : null,
+                    ),
+                    child: childWidget,
+                  ),
+          ),
+        );
+      },
     );
   }
 }
