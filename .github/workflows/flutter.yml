@@ -17,8 +17,38 @@ jobs:
       - run: flutter --version
       - run: flutter pub get
       - run: flutter analyze
-      - name: Classify narrow Home overflow
-        run: flutter test test/home_overflow_probe_test.dart
+      - name: Confirm narrow Home FlutterError
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "narrow Home throws a FlutterError"
+      - name: Probe Home header
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _HomeHeader"
+      - name: Probe active study
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _ActiveStudy"
+      - name: Probe Today panel
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _TodayPanel"
+      - name: Probe quick actions
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _QuickActions"
+      - name: Probe section heading
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _SectionHeading"
+      - name: Probe recent grid
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _RecentGrid"
+      - name: Probe recent row
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _RecentRow"
+      - name: Probe spaces strip
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _SpacesStrip"
+      - name: Probe space row
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _SpaceRow"
+      - name: Probe create space
+        continue-on-error: true
+        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _CreateSpace"
       - name: Narrow Home regression
         run: flutter test test/narrow_layout_probe_test.dart --plain-name "narrow home layout is stable"
       - name: Narrow Library regression
