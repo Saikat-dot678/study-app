@@ -17,8 +17,16 @@ jobs:
       - run: flutter --version
       - run: flutter pub get
       - run: flutter analyze
-      - name: Responsive layout regression tests
-        run: flutter test test/responsive_layout_test.dart
+      - name: Responsive 360x640
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 360.0x640.0"
+      - name: Responsive 412x915
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 412.0x915.0"
+      - name: Responsive 800x1000
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 800.0x1000.0"
+      - name: Responsive 1366x768
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 1366.0x768.0"
+      - name: Responsive 1920x1080
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 1920.0x1080.0"
       - name: Shell and reader regression tests
         run: flutter test test/frontend_regression_test.dart
       - name: Full Flutter test suite
@@ -39,8 +47,16 @@ jobs:
       - run: powershell -ExecutionPolicy Bypass -File .\tool\patch_windows_cmake.ps1
       - run: flutter pub get
       - run: flutter analyze
-      - name: Responsive layout regression tests
-        run: flutter test test/responsive_layout_test.dart
+      - name: Responsive 360x640
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 360.0x640.0"
+      - name: Responsive 412x915
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 412.0x915.0"
+      - name: Responsive 800x1000
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 800.0x1000.0"
+      - name: Responsive 1366x768
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 1366.0x768.0"
+      - name: Responsive 1920x1080
+        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 1920.0x1080.0"
       - name: Shell and reader regression tests
         run: flutter test test/frontend_regression_test.dart
       - name: Full Flutter test suite
