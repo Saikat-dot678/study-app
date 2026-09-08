@@ -116,8 +116,8 @@ class StudyColors extends ThemeExtension<StudyColors> {
 }
 
 abstract final class AppTheme {
-  static ThemeData get light => lightFor(const DateTime(2026, 6, 15, 12));
-  static ThemeData get dark => darkFor(const DateTime(2026, 6, 15, 21));
+  static ThemeData get light => lightFor(DateTime(2026, 6, 15, 12));
+  static ThemeData get dark => darkFor(DateTime(2026, 6, 15, 21));
 
   static ThemeData lightFor(DateTime now) => _build(now, dark: false);
   static ThemeData darkFor(DateTime now) => _build(now, dark: true);
@@ -306,6 +306,11 @@ abstract final class AppTheme {
   }
 
   static ColorScheme _lightScheme(StudyColors palette) {
+    final surface = Color.lerp(
+      const Color(0xFFF5F7FA),
+      palette.ambientStart,
+      0.18,
+    )!;
     return ColorScheme.fromSeed(
       seedColor: palette.ambientAccent,
       brightness: Brightness.light,
@@ -318,9 +323,9 @@ abstract final class AppTheme {
       secondaryContainer: const Color(0xFFD9F5EC),
       tertiary: const Color(0xFFD84A2F),
       tertiaryContainer: const Color(0xFFFFE2D9),
-      surface: const Color(0xFFF5F7FA),
+      surface: surface,
       surfaceContainerLowest: Colors.white,
-      surfaceContainerLow: const Color(0xFFFAFBFC),
+      surfaceContainerLow: Color.lerp(const Color(0xFFFAFBFC), palette.ambientEnd, 0.05)!,
       surfaceContainer: const Color(0xFFF0F3F7),
       surfaceContainerHigh: const Color(0xFFE8ECF2),
       surfaceContainerHighest: const Color(0xFFDDE3EB),
@@ -332,6 +337,11 @@ abstract final class AppTheme {
   }
 
   static ColorScheme _darkScheme(StudyColors palette) {
+    final surface = Color.lerp(
+      const Color(0xFF111419),
+      palette.ambientStart,
+      0.22,
+    )!;
     return ColorScheme.fromSeed(
       seedColor: palette.ambientAccent,
       brightness: Brightness.dark,
@@ -344,9 +354,9 @@ abstract final class AppTheme {
       secondaryContainer: const Color(0xFF123F35),
       tertiary: const Color(0xFFFF9A76),
       tertiaryContainer: const Color(0xFF5D2C20),
-      surface: const Color(0xFF111419),
+      surface: surface,
       surfaceContainerLowest: const Color(0xFF171B21),
-      surfaceContainerLow: const Color(0xFF1C2128),
+      surfaceContainerLow: Color.lerp(const Color(0xFF1C2128), palette.ambientEnd, 0.08)!,
       surfaceContainer: const Color(0xFF222831),
       surfaceContainerHigh: const Color(0xFF2B323C),
       surfaceContainerHighest: const Color(0xFF343C47),
