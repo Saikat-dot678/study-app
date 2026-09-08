@@ -2,18 +2,15 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// A static, low-cost backdrop for the application shell.
-///
-/// The previous implementation animated several blurred full-screen layers on
-/// every frame. This keeps a sense of depth without a ticker, backdrop filters,
-/// or continuous repainting.
+import '../theme.dart';
+
 class NebulaBackdrop extends StatelessWidget {
   const NebulaBackdrop({super.key});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final palette = StudyColors.of(context);
     return IgnorePointer(
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -22,9 +19,9 @@ class NebulaBackdrop extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
+              Color.lerp(scheme.surface, palette.ambientStart, 0.42)!,
               scheme.surface,
-              Color.lerp(scheme.surface, scheme.primary, dark ? 0.035 : 0.018)!,
-              scheme.surface,
+              Color.lerp(scheme.surface, palette.ambientEnd, 0.30)!,
             ],
             stops: const [0, 0.52, 1],
           ),
@@ -34,17 +31,12 @@ class NebulaBackdrop extends StatelessWidget {
   }
 }
 
-/// The shared application surface.
-///
-/// The name is retained to avoid churn across feature pages, but this is an
-/// opaque surface rather than a BackdropFilter. Native Material states provide
-/// hover, focus, keyboard and touch feedback safely.
 class GlassPanel extends StatelessWidget {
   const GlassPanel({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(18),
-    this.radius = 18,
+    this.radius = 14,
     this.blur = 0,
     this.tint,
     this.borderColor,
@@ -67,34 +59,54 @@ class GlassPanel extends StatelessWidget {
     final surface = tint ?? scheme.surfaceContainerLowest;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(radius),
-      side: BorderSide(
-        color: borderColor ?? scheme.outlineVariant.withValues(alpha: 0.72),
-      ),
+      side: BorderSide(color: borderColor ?? scheme.outlineVariant),
     );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: glow
-            ? [
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.08),
-                  blurRadius: 22,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : const [],
-      ),
-      child: Material(
-        color: surface,
-        shape: shape,
-        clipBehavior: Clip.antiAlias,
-        child: onTap == null
-            ? Padding(padding: padding, child: child)
-            : InkWell(
-                onTap: onTap,
-                child: Padding(padding: padding, child: child),
-              ),
-      ),
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scaledBody = MediaQuery.textScalerOf(context).scale(14);
+        final compact = constraints.maxWidth < 340 || scaledBody >= 18;
+        final effectivePadding = compact
+            ? EdgeInsets.fromLTRB(
+                math.min(padding.left, 12),
+                padding.top,
+                math.min(padding.right, 12),
+                padding.bottom,
+              )
+            : padding;
+        final childWidget = Padding(padding: effectivePadding, child: child);
+
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius),
+            boxShadow: glow
+                ? [
+                    BoxShadow(
+                      color: scheme.shadow.withValues(alpha: 0.08),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : const [],
+          ),
+          child: Material(
+            color: surface,
+            shape: shape,
+            clipBehavior: Clip.antiAlias,
+            child: onTap == null
+                ? childWidget
+                : InkWell(
+                    onTap: onTap,
+                    overlayColor: WidgetStateProperty.resolveWith(
+                      (states) => states.contains(WidgetState.hovered)
+                          ? scheme.primary.withValues(alpha: 0.035)
+                          : null,
+                    ),
+                    child: childWidget,
+                  ),
+          ),
+        );
+      },
     );
   }
 }
@@ -104,7 +116,7 @@ class GradientBorderCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(20),
-    this.radius = 22,
+    this.radius = 16,
     this.onTap,
   });
 
@@ -116,29 +128,13 @@ class GradientBorderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        gradient: LinearGradient(
-          colors: [
-            scheme.primary.withValues(alpha: 0.72),
-            scheme.outlineVariant.withValues(alpha: 0.34),
-            scheme.tertiary.withValues(alpha: 0.55),
-          ],
-        ),
-      ),
-      child: Material(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(radius - 1),
-        clipBehavior: Clip.antiAlias,
-        child: onTap == null
-            ? Padding(padding: padding, child: child)
-            : InkWell(
-                onTap: onTap,
-                child: Padding(padding: padding, child: child),
-              ),
-      ),
+    final palette = StudyColors.of(context);
+    return GlassPanel(
+      padding: padding,
+      radius: radius,
+      borderColor: Color.lerp(scheme.outlineVariant, palette.ambientAccent, 0.46),
+      onTap: onTap,
+      child: child,
     );
   }
 }
@@ -152,28 +148,29 @@ class EyebrowLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: scheme.primary.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: scheme.primary),
-          const SizedBox(width: 6),
-          Text(
-            text.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: scheme.primary,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.75,
-            ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 3,
+          height: 16,
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            borderRadius: BorderRadius.circular(2),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 7),
+        Icon(icon, size: 14, color: scheme.primary),
+        const SizedBox(width: 5),
+        Text(
+          text.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -265,14 +262,12 @@ class TinySparkline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = StudyColors.of(context);
     return SizedBox(
       width: double.infinity,
       height: height,
       child: CustomPaint(
-        painter: _SparkPainter(
-          values: values,
-          color: Theme.of(context).colorScheme.tertiary,
-        ),
+        painter: _SparkPainter(values: values, color: palette.research),
       ),
     );
   }
@@ -297,13 +292,13 @@ class _SparkPainter extends CustomPainter {
     final active = Paint()..color = color;
     for (var i = 0; i < values.length; i++) {
       final fraction = (values[i] / denominator).clamp(0.08, 1.0);
-      final height = size.height * fraction;
+      final barHeight = size.height * fraction;
       final rect = RRect.fromRectAndRadius(
         Rect.fromLTWH(
           i * (barWidth + gap),
-          size.height - height,
+          size.height - barHeight,
           barWidth,
-          height,
+          barHeight,
         ),
         Radius.circular(barWidth / 2),
       );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
@@ -8,17 +10,42 @@ void main() {
   runApp(const StudyApp());
 }
 
-class StudyApp extends StatelessWidget {
+class StudyApp extends StatefulWidget {
   const StudyApp({super.key});
+
+  @override
+  State<StudyApp> createState() => _StudyAppState();
+}
+
+class _StudyAppState extends State<StudyApp> {
+  late DateTime now;
+  Timer? refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    now = DateTime.now();
+    refreshTimer = Timer.periodic(const Duration(minutes: 15), (_) {
+      if (mounted) setState(() => now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    refreshTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Study App',
+      title: 'Study',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.lightFor(now),
+      darkTheme: AppTheme.darkFor(now),
       themeMode: ThemeMode.system,
+      themeAnimationDuration: const Duration(milliseconds: 700),
+      themeAnimationCurve: Curves.easeInOutCubic,
       home: const StudyShell(),
     );
   }
