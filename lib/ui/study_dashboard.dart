@@ -329,6 +329,7 @@ class _ActiveStudy extends StatelessWidget {
         : 'Page ${progress!.page} of ${progress!.pageCount}';
     final title = entry?.name ?? 'Choose something to study';
     final path = entry?.path ?? 'Open your library or add material to begin.';
+    final accent = entry == null ? palette.folder : _entryColor(context, entry!);
 
     return Container(
       constraints: const BoxConstraints(minHeight: 258),
@@ -345,87 +346,86 @@ class _ActiveStudy extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: [
-          Container(
-            width: 7,
-            color: entry == null ? palette.folder : _entryColor(context, entry!),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: SizedBox(width: 7, child: ColoredBox(color: accent)),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'CONTINUE STUDYING',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.9,
-                    ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(31, 22, 24, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'CONTINUE STUDYING',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.9,
                   ),
-                  const SizedBox(height: 17),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (entry != null) FileIcon(entry: entry!, large: true),
-                      if (entry != null) const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              path,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 22),
-                  if (entry != null) ...[
-                    if (pageText != null)
-                      Row(
+                ),
+                const SizedBox(height: 17),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (entry != null) FileIcon(entry: entry!, large: true),
+                    if (entry != null) const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(pageText, style: Theme.of(context).textTheme.labelMedium),
-                          const Spacer(),
                           Text(
-                            '${(fraction * 100).round()}%',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            path,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: scheme.onSurfaceVariant,
                             ),
                           ),
                         ],
                       ),
-                    if (pageText != null) const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(99),
-                      child: LinearProgressIndicator(value: fraction, minHeight: 5),
                     ),
-                    const SizedBox(height: 17),
                   ],
-                  FilledButton.icon(
-                    onPressed: onOpen ?? onLibrary,
-                    icon: Icon(entry == null ? Icons.add_rounded : Icons.play_arrow_rounded),
-                    label: Text(entry == null ? 'Add material' : 'Resume'),
+                ),
+                const SizedBox(height: 22),
+                if (entry != null) ...[
+                  if (pageText != null)
+                    Row(
+                      children: [
+                        Text(pageText, style: Theme.of(context).textTheme.labelMedium),
+                        const Spacer(),
+                        Text(
+                          '${(fraction * 100).round()}%',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (pageText != null) const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: LinearProgressIndicator(value: fraction, minHeight: 5),
                   ),
+                  const SizedBox(height: 17),
                 ],
-              ),
+                FilledButton.icon(
+                  onPressed: onOpen ?? onLibrary,
+                  icon: Icon(entry == null ? Icons.add_rounded : Icons.play_arrow_rounded),
+                  label: Text(entry == null ? 'Add material' : 'Resume'),
+                ),
+              ],
             ),
           ),
         ],
