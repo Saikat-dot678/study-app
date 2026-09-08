@@ -17,53 +17,11 @@ jobs:
       - run: flutter --version
       - run: flutter pub get
       - run: flutter analyze
-      - name: Confirm narrow Home FlutterError
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "narrow Home throws a FlutterError"
-      - name: Probe Home header
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _HomeHeader"
-      - name: Probe active study
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _ActiveStudy"
-      - name: Probe Today panel
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _TodayPanel"
-      - name: Probe quick actions
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _QuickActions"
-      - name: Probe section heading
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _SectionHeading"
-      - name: Probe recent grid
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _RecentGrid"
-      - name: Probe recent row
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _RecentRow"
-      - name: Probe spaces strip
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _SpacesStrip"
-      - name: Probe space row
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _SpaceRow"
-      - name: Probe create space
-        continue-on-error: true
-        run: flutter test test/home_overflow_probe_test.dart --plain-name "overflow details contain _CreateSpace"
-      - name: Narrow Home regression
-        run: flutter test test/narrow_layout_probe_test.dart --plain-name "narrow home layout is stable"
-      - name: Narrow Library regression
-        run: flutter test test/narrow_layout_probe_test.dart --plain-name "narrow library layout is stable"
-      - name: Responsive 360x640
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 360.0x640.0"
-      - name: Responsive 412x915
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 412.0x915.0"
-      - name: Responsive 800x1000
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 800.0x1000.0"
-      - name: Responsive 1366x768
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 1366.0x768.0"
-      - name: Responsive 1920x1080
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 1920.0x1080.0"
-      - name: Shell and reader regression tests
+      - name: Narrow layout regression
+        run: flutter test test/narrow_layout_probe_test.dart
+      - name: Responsive layout regression
+        run: flutter test test/responsive_layout_test.dart
+      - name: Shell and reader regression
         run: flutter test test/frontend_regression_test.dart
       - name: Full Flutter test suite
         run: flutter test
@@ -83,21 +41,11 @@ jobs:
       - run: powershell -ExecutionPolicy Bypass -File .\tool\patch_windows_cmake.ps1
       - run: flutter pub get
       - run: flutter analyze
-      - name: Narrow Home regression
-        run: flutter test test/narrow_layout_probe_test.dart --plain-name "narrow home layout is stable"
-      - name: Narrow Library regression
-        run: flutter test test/narrow_layout_probe_test.dart --plain-name "narrow library layout is stable"
-      - name: Responsive 360x640
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 360.0x640.0"
-      - name: Responsive 412x915
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 412.0x915.0"
-      - name: Responsive 800x1000
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 800.0x1000.0"
-      - name: Responsive 1366x768
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 1366.0x768.0"
-      - name: Responsive 1920x1080
-        run: flutter test test/responsive_layout_test.dart --plain-name "home and library avoid layout errors at 1920.0x1080.0"
-      - name: Shell and reader regression tests
+      - name: Narrow layout regression
+        run: flutter test test/narrow_layout_probe_test.dart
+      - name: Responsive layout regression
+        run: flutter test test/responsive_layout_test.dart
+      - name: Shell and reader regression
         run: flutter test test/frontend_regression_test.dart
       - name: Full Flutter test suite
         run: flutter test
