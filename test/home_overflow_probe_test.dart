@@ -8,39 +8,61 @@ import 'package:study_app/ui/study_dashboard.dart';
 import 'package:study_app/workspace/study_workspace_controller.dart';
 
 void main() {
-  testWidgets('narrow Home overflow originates in Today panel', (tester) async {
-    tester.view.physicalSize = const Size(360, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final controller = _controller();
-    addTearDown(controller.dispose);
+  testWidgets('narrow Home throws a FlutterError', (tester) async {
+    final details = await _overflowDetails(tester);
+    expect(details, isNotEmpty);
+  });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: const TextScaler.linear(1.3),
-          ),
-          child: child!,
+  for (final marker in [
+    '_HomeHeader',
+    '_ActiveStudy',
+    '_TodayPanel',
+    '_QuickActions',
+    '_SectionHeading',
+    '_RecentGrid',
+    '_RecentRow',
+    '_SpacesStrip',
+    '_SpaceRow',
+    '_CreateSpace',
+  ]) {
+    testWidgets('overflow details contain $marker', (tester) async {
+      final details = await _overflowDetails(tester);
+      expect(details, contains(marker));
+    });
+  }
+}
+
+Future<String> _overflowDetails(WidgetTester tester) async {
+  tester.view.physicalSize = const Size(360, 640);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  final controller = _controller();
+  addTearDown(controller.dispose);
+
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.light,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: const TextScaler.linear(1.3),
         ),
-        home: Scaffold(
-          body: StudyDashboard(
-            controller: controller,
-            workspace: StudyWorkspaceController.instance,
-            openLibrary: (_) {},
-            openGoals: () {},
-          ),
+        child: child!,
+      ),
+      home: Scaffold(
+        body: StudyDashboard(
+          controller: controller,
+          workspace: StudyWorkspaceController.instance,
+          openLibrary: (_) {},
+          openGoals: () {},
         ),
       ),
-    );
-    await tester.pump(const Duration(seconds: 2));
-    final exception = tester.takeException();
-    expect(exception, isA<FlutterError>());
-    final details = (exception! as FlutterError).toStringDeep();
-    expect(details, contains('_TodayPanel'));
-  });
+    ),
+  );
+  await tester.pump(const Duration(seconds: 2));
+  final exception = tester.takeException();
+  expect(exception, isA<FlutterError>());
+  return (exception! as FlutterError).toStringDeep();
 }
 
 LibraryController _controller() {
