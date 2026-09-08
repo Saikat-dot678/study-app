@@ -124,54 +124,7 @@ abstract final class AppTheme {
 
   static ThemeData _build(DateTime now, {required bool dark}) {
     final palette = _adaptivePalette(now, dark: dark);
-    final scheme = dark
-        ? ColorScheme.fromSeed(
-            seedColor: palette.ambientAccent,
-            brightness: Brightness.dark,
-          ).copyWith(
-            primary: const Color(0xFF8FB8FF),
-            onPrimary: const Color(0xFF071B3F),
-            primaryContainer: const Color(0xFF173C73),
-            onPrimaryContainer: const Color(0xFFDCE8FF),
-            secondary: const Color(0xFF62D6B5),
-            secondaryContainer: const Color(0xFF123F35),
-            tertiary: const Color(0xFFFF9A76),
-            tertiaryContainer: const Color(0xFF5D2C20),
-            surface: const Color(0xFF111419),
-            surfaceContainerLowest: const Color(0xFF171B21),
-            surfaceContainerLow: const Color(0xFF1C2128),
-            surfaceContainer: const Color(0xFF222831),
-            surfaceContainerHigh: const Color(0xFF2B323C),
-            surfaceContainerHighest: const Color(0xFF343C47),
-            onSurface: const Color(0xFFF2F4F8),
-            onSurfaceVariant: const Color(0xFFB8C0CC),
-            outline: const Color(0xFF747F8D),
-            outlineVariant: const Color(0xFF333B46),
-          )
-        : ColorScheme.fromSeed(
-            seedColor: palette.ambientAccent,
-            brightness: Brightness.light,
-          ).copyWith(
-            primary: const Color(0xFF155EEF),
-            onPrimary: Colors.white,
-            primaryContainer: const Color(0xFFDCE8FF),
-            onPrimaryContainer: const Color(0xFF0D3376),
-            secondary: const Color(0xFF087D69),
-            secondaryContainer: const Color(0xFFD9F5EC),
-            tertiary: const Color(0xFFD84A2F),
-            tertiaryContainer: const Color(0xFFFFE2D9),
-            surface: const Color(0xFFF5F7FA),
-            surfaceContainerLowest: Colors.white,
-            surfaceContainerLow: const Color(0xFFFAFBFC),
-            surfaceContainer: const Color(0xFFF0F3F7),
-            surfaceContainerHigh: const Color(0xFFE8ECF2),
-            surfaceContainerHighest: const Color(0xFFDDE3EB),
-            onSurface: const Color(0xFF17202A),
-            onSurfaceVariant: const Color(0xFF5D6978),
-            outline: const Color(0xFF8995A5),
-            outlineVariant: const Color(0xFFD6DCE5),
-          );
-
+    final scheme = dark ? _darkScheme(palette) : _lightScheme(palette);
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
@@ -198,19 +151,19 @@ abstract final class AppTheme {
           height: 1.04,
         ),
         headlineMedium: text.headlineMedium?.copyWith(
-          fontWeight: FontWeight.w750,
+          fontWeight: FontWeight.w700,
           letterSpacing: -0.72,
           height: 1.08,
         ),
         headlineSmall: text.headlineSmall?.copyWith(
-          fontWeight: FontWeight.w750,
+          fontWeight: FontWeight.w700,
           letterSpacing: -0.45,
         ),
         titleLarge: text.titleLarge?.copyWith(
-          fontWeight: FontWeight.w750,
+          fontWeight: FontWeight.w700,
           letterSpacing: -0.28,
         ),
-        titleMedium: text.titleMedium?.copyWith(fontWeight: FontWeight.w650),
+        titleMedium: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         labelLarge: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
         labelMedium: text.labelMedium?.copyWith(fontWeight: FontWeight.w600),
       ),
@@ -220,7 +173,6 @@ abstract final class AppTheme {
         backgroundColor: scheme.surfaceContainerLowest,
         foregroundColor: scheme.onSurface,
         surfaceTintColor: Colors.transparent,
-        centerTitle: false,
       ),
       cardTheme: CardThemeData(
         elevation: 0,
@@ -353,17 +305,67 @@ abstract final class AppTheme {
     );
   }
 
+  static ColorScheme _lightScheme(StudyColors palette) {
+    return ColorScheme.fromSeed(
+      seedColor: palette.ambientAccent,
+      brightness: Brightness.light,
+    ).copyWith(
+      primary: const Color(0xFF155EEF),
+      onPrimary: Colors.white,
+      primaryContainer: const Color(0xFFDCE8FF),
+      onPrimaryContainer: const Color(0xFF0D3376),
+      secondary: const Color(0xFF087D69),
+      secondaryContainer: const Color(0xFFD9F5EC),
+      tertiary: const Color(0xFFD84A2F),
+      tertiaryContainer: const Color(0xFFFFE2D9),
+      surface: const Color(0xFFF5F7FA),
+      surfaceContainerLowest: Colors.white,
+      surfaceContainerLow: const Color(0xFFFAFBFC),
+      surfaceContainer: const Color(0xFFF0F3F7),
+      surfaceContainerHigh: const Color(0xFFE8ECF2),
+      surfaceContainerHighest: const Color(0xFFDDE3EB),
+      onSurface: const Color(0xFF17202A),
+      onSurfaceVariant: const Color(0xFF5D6978),
+      outline: const Color(0xFF8995A5),
+      outlineVariant: const Color(0xFFD6DCE5),
+    );
+  }
+
+  static ColorScheme _darkScheme(StudyColors palette) {
+    return ColorScheme.fromSeed(
+      seedColor: palette.ambientAccent,
+      brightness: Brightness.dark,
+    ).copyWith(
+      primary: const Color(0xFF8FB8FF),
+      onPrimary: const Color(0xFF071B3F),
+      primaryContainer: const Color(0xFF173C73),
+      onPrimaryContainer: const Color(0xFFDCE8FF),
+      secondary: const Color(0xFF62D6B5),
+      secondaryContainer: const Color(0xFF123F35),
+      tertiary: const Color(0xFFFF9A76),
+      tertiaryContainer: const Color(0xFF5D2C20),
+      surface: const Color(0xFF111419),
+      surfaceContainerLowest: const Color(0xFF171B21),
+      surfaceContainerLow: const Color(0xFF1C2128),
+      surfaceContainer: const Color(0xFF222831),
+      surfaceContainerHigh: const Color(0xFF2B323C),
+      surfaceContainerHighest: const Color(0xFF343C47),
+      onSurface: const Color(0xFFF2F4F8),
+      onSurfaceVariant: const Color(0xFFB8C0CC),
+      outline: const Color(0xFF747F8D),
+      outlineVariant: const Color(0xFF333B46),
+    );
+  }
+
   static StudyColors _adaptivePalette(DateTime now, {required bool dark}) {
-    final season = _season(now.month);
-    final day = _dayPart(now.hour);
-    final base = switch (season) {
-      _Season.spring => const [Color(0xFF18A66A), Color(0xFF2D7FF9), Color(0xFFE84D7A)],
-      _Season.summer => const [Color(0xFF008E9B), Color(0xFF1677FF), Color(0xFFFF7A1A)],
-      _Season.monsoon => const [Color(0xFF087F8C), Color(0xFF315CEB), Color(0xFF38B67A)],
-      _Season.autumn => const [Color(0xFFE17018), Color(0xFFB84061), Color(0xFF5158C9)],
-      _Season.winter => const [Color(0xFF3973D7), Color(0xFF7557D3), Color(0xFF20A7B8)],
+    final accents = switch (_season(now.month)) {
+      _Season.spring => const [Color(0xFF18A66A), Color(0xFF2D7FF9)],
+      _Season.summer => const [Color(0xFF008E9B), Color(0xFF1677FF)],
+      _Season.monsoon => const [Color(0xFF087F8C), Color(0xFF315CEB)],
+      _Season.autumn => const [Color(0xFFE17018), Color(0xFFB84061)],
+      _Season.winter => const [Color(0xFF3973D7), Color(0xFF7557D3)],
     };
-    final mood = switch (day) {
+    final mood = switch (_dayPart(now.hour)) {
       _DayPart.dawn => dark ? const Color(0xFF263044) : const Color(0xFFEFF4FF),
       _DayPart.morning => dark ? const Color(0xFF172B36) : const Color(0xFFF5FAFF),
       _DayPart.day => dark ? const Color(0xFF161C26) : const Color(0xFFF7F9FC),
@@ -371,12 +373,10 @@ abstract final class AppTheme {
       _DayPart.night => dark ? const Color(0xFF121724) : const Color(0xFFF1F4FA),
       _DayPart.deepNight => dark ? const Color(0xFF0C111A) : const Color(0xFFEFF3F8),
     };
-    final end = Color.lerp(mood, base[0], dark ? 0.16 : 0.07)!;
-
     return StudyColors(
       ambientStart: mood,
-      ambientEnd: end,
-      ambientAccent: base[1],
+      ambientEnd: Color.lerp(mood, accents[0], dark ? 0.16 : 0.07)!,
+      ambientAccent: accents[1],
       pdf: const Color(0xFFE5484D),
       slides: const Color(0xFFF07B24),
       note: const Color(0xFF1598D2),
@@ -385,7 +385,7 @@ abstract final class AppTheme {
       audio: const Color(0xFFD84D9B),
       video: const Color(0xFF7656D6),
       image: const Color(0xFF2F9E76),
-      folder: base[1],
+      folder: accents[1],
       research: const Color(0xFF008C7A),
       exam: const Color(0xFF7A52D1),
       project: const Color(0xFFE36A2E),
