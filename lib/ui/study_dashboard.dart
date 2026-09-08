@@ -26,9 +26,7 @@ class StudyDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!controller.connected) {
-      return ConnectLibraryView(controller: controller);
-    }
+    if (!controller.connected) return ConnectLibraryView(controller: controller);
 
     final today = StudyWorkspaceController.dateOnly(DateTime.now());
     final tasks = workspace.tasksForDay(today);
@@ -51,37 +49,27 @@ class StudyDashboard extends StatelessWidget {
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(horizontal, 22, horizontal, 0),
                 sliver: SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1320),
-                      child: _HomeHeader(
-                        controller: controller,
-                        workspace: workspace,
-                      ),
-                    ),
+                  child: _Centered(
+                    child: _HomeHeader(controller: controller, workspace: workspace),
                   ),
                 ),
               ),
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(horizontal, 22, horizontal, 0),
                 sliver: SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1320),
-                      child: _PrimaryComposition(
-                        width: constraints.maxWidth,
-                        active: active,
-                        controller: controller,
-                        tasks: tasks,
-                        workspace: workspace,
-                        onOpenActive: active == null
-                            ? null
-                            : () => openStudyViewer(context, controller, active),
-                        onPlanner: openGoals,
-                        onInbox: () => openLibrary('Inbox'),
-                        onAdd: () =>
-                            showAddSheet(context, controller, fromHome: true),
-                      ),
+                  child: _Centered(
+                    child: _PrimaryComposition(
+                      width: constraints.maxWidth,
+                      active: active,
+                      controller: controller,
+                      tasks: tasks,
+                      workspace: workspace,
+                      onOpenActive: active == null
+                          ? null
+                          : () => openStudyViewer(context, controller, active),
+                      onPlanner: openGoals,
+                      onInbox: () => openLibrary('Inbox'),
+                      onAdd: () => showAddSheet(context, controller, fromHome: true),
                     ),
                   ),
                 ),
@@ -89,17 +77,13 @@ class StudyDashboard extends StatelessWidget {
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(horizontal, 18, horizontal, 0),
                 sliver: SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1320),
-                      child: _QuickActions(
-                        onLibrary: () => openLibrary(null),
-                        onPlanner: openGoals,
-                        onInbox: () => openLibrary('Inbox'),
-                        onAdd: () =>
-                            showAddSheet(context, controller, fromHome: true),
-                        inboxCount: controller.materialCountUnder('Inbox'),
-                      ),
+                  child: _Centered(
+                    child: _QuickActions(
+                      onLibrary: () => openLibrary(null),
+                      onPlanner: openGoals,
+                      onInbox: () => openLibrary('Inbox'),
+                      onAdd: () => showAddSheet(context, controller, fromHome: true),
+                      inboxCount: controller.materialCountUnder('Inbox'),
                     ),
                   ),
                 ),
@@ -108,15 +92,12 @@ class StudyDashboard extends StatelessWidget {
                 SliverPadding(
                   padding: EdgeInsets.fromLTRB(horizontal, 30, horizontal, 10),
                   sliver: SliverToBoxAdapter(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1320),
-                        child: _SectionHeading(
-                          title: 'Recent',
-                          detail: 'Materials you opened lately',
-                          action: 'Library',
-                          onAction: () => openLibrary(null),
-                        ),
+                    child: _Centered(
+                      child: _SectionHeading(
+                        title: 'Recent',
+                        detail: 'Materials you opened lately',
+                        action: 'Library',
+                        onAction: () => openLibrary(null),
                       ),
                     ),
                   ),
@@ -124,15 +105,11 @@ class StudyDashboard extends StatelessWidget {
                 SliverPadding(
                   padding: EdgeInsets.symmetric(horizontal: horizontal),
                   sliver: SliverToBoxAdapter(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1320),
-                        child: _RecentGrid(
-                          entries: recent,
-                          controller: controller,
-                          onOpen: (entry) =>
-                              openStudyViewer(context, controller, entry),
-                        ),
+                    child: _Centered(
+                      child: _RecentGrid(
+                        entries: recent,
+                        controller: controller,
+                        onOpen: (entry) => openStudyViewer(context, controller, entry),
                       ),
                     ),
                   ),
@@ -141,15 +118,12 @@ class StudyDashboard extends StatelessWidget {
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(horizontal, 30, horizontal, 10),
                 sliver: SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1320),
-                      child: _SectionHeading(
-                        title: 'Study spaces',
-                        detail: '${controller.materialCountUnder('')} materials',
-                        action: 'Browse',
-                        onAction: () => openLibrary(null),
-                      ),
+                  child: _Centered(
+                    child: _SectionHeading(
+                      title: 'Study spaces',
+                      detail: '${controller.materialCountUnder('')} materials',
+                      action: 'Browse',
+                      onAction: () => openLibrary(null),
                     ),
                   ),
                 ),
@@ -157,15 +131,12 @@ class StudyDashboard extends StatelessWidget {
               SliverPadding(
                 padding: EdgeInsets.fromLTRB(horizontal, 0, horizontal, 110),
                 sliver: SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1320),
-                      child: _SpacesStrip(
-                        controller: controller,
-                        spaces: spaces,
-                        onOpen: openLibrary,
-                        onCreate: () => showCreateSpaceSheet(context, controller),
-                      ),
+                  child: _Centered(
+                    child: _SpacesStrip(
+                      controller: controller,
+                      spaces: spaces,
+                      onOpen: openLibrary,
+                      onCreate: () => showCreateSpaceSheet(context, controller),
                     ),
                   ),
                 ),
@@ -178,9 +149,23 @@ class StudyDashboard extends StatelessWidget {
   }
 }
 
+class _Centered extends StatelessWidget {
+  const _Centered({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1320),
+        child: child,
+      ),
+    );
+  }
+}
+
 class _HomeHeader extends StatelessWidget {
   const _HomeHeader({required this.controller, required this.workspace});
-
   final LibraryController controller;
   final StudyWorkspaceController workspace;
 
@@ -221,13 +206,13 @@ class _HomeHeader extends StatelessWidget {
                 label: 'min this week',
                 color: palette.research,
               ),
-              const SizedBox(width: 22),
+              const SizedBox(width: 20),
               _HeaderStat(
                 value: '${workspace.studyStreak}',
                 label: 'day streak',
                 color: palette.project,
               ),
-              const SizedBox(width: 22),
+              const SizedBox(width: 20),
               _HeaderStat(
                 value: '${controller.materialCountUnder('')}',
                 label: 'materials',
@@ -242,7 +227,6 @@ class _HomeHeader extends StatelessWidget {
 
 class _HeaderStat extends StatelessWidget {
   const _HeaderStat({required this.value, required this.label, required this.color});
-
   final String value;
   final String label;
   final Color color;
@@ -312,7 +296,7 @@ class _PrimaryComposition extends StatelessWidget {
       return Column(children: [study, const SizedBox(height: 14), agenda]);
     }
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(flex: 7, child: study),
         const SizedBox(width: 14),
@@ -347,7 +331,7 @@ class _ActiveStudy extends StatelessWidget {
     final path = entry?.path ?? 'Open your library or add material to begin.';
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 252),
+      constraints: const BoxConstraints(minHeight: 258),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
@@ -362,6 +346,7 @@ class _ActiveStudy extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
             width: 7,
@@ -371,6 +356,7 @@ class _ActiveStudy extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -381,7 +367,7 @@ class _ActiveStudy extends StatelessWidget {
                       letterSpacing: 0.9,
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 17),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -411,7 +397,7 @@ class _ActiveStudy extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 22),
                   if (entry != null) ...[
                     if (pageText != null)
                       Row(
@@ -469,6 +455,7 @@ class _TodayPanel extends StatelessWidget {
     return GlassPanel(
       padding: const EdgeInsets.all(20),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -480,30 +467,22 @@ class _TodayPanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           if (pending.isEmpty)
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  tasks.isEmpty
-                      ? 'No study blocks scheduled.'
-                      : 'Everything planned for today is complete.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                tasks.isEmpty
+                    ? 'No study blocks scheduled.'
+                    : 'Everything planned for today is complete.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             )
           else
-            Expanded(
-              child: Column(
-                children: [
-                  for (var i = 0; i < pending.length; i++) ...[
-                    _TaskLine(task: pending[i]),
-                    if (i != pending.length - 1) const Divider(height: 18),
-                  ],
-                ],
-              ),
-            ),
+            for (var i = 0; i < pending.length; i++) ...[
+              _TaskLine(task: pending[i]),
+              if (i != pending.length - 1) const Divider(height: 18),
+            ],
           const Divider(height: 20),
           Row(
             children: [
@@ -559,7 +538,7 @@ class _TaskLine extends StatelessWidget {
                 task.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w650),
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 2),
               Text(
@@ -602,8 +581,7 @@ class _QuickActions extends StatelessWidget {
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 700;
-        if (compact) {
+        if (constraints.maxWidth < 700) {
           return Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -689,7 +667,7 @@ class _QuickAction extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w650)),
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 1),
                     Text(
                       subtitle,
@@ -717,7 +695,6 @@ class _SectionHeading extends StatelessWidget {
     required this.action,
     required this.onAction,
   });
-
   final String title;
   final String detail;
   final String action;
@@ -750,7 +727,6 @@ class _RecentGrid extends StatelessWidget {
     required this.controller,
     required this.onOpen,
   });
-
   final List<LibraryEntry> entries;
   final LibraryController controller;
   final ValueChanged<LibraryEntry> onOpen;
@@ -788,7 +764,6 @@ class _RecentGrid extends StatelessWidget {
 
 class _RecentRow extends StatelessWidget {
   const _RecentRow({required this.entry, required this.progress, required this.onTap});
-
   final LibraryEntry entry;
   final StudyProgress? progress;
   final VoidCallback onTap;
@@ -822,7 +797,7 @@ class _RecentRow extends StatelessWidget {
                       entry.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w650),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -857,7 +832,6 @@ class _SpacesStrip extends StatelessWidget {
     required this.onOpen,
     required this.onCreate,
   });
-
   final LibraryController controller;
   final List<LibraryEntry> spaces;
   final ValueChanged<String?> onOpen;
@@ -894,10 +868,7 @@ class _SpacesStrip extends StatelessWidget {
                   onTap: () => onOpen(spaces[i].path),
                 ),
               ),
-            SizedBox(
-              width: width,
-              child: _CreateSpace(onTap: onCreate),
-            ),
+            SizedBox(width: width, child: _CreateSpace(onTap: onCreate)),
           ],
         );
       },
@@ -914,7 +885,6 @@ class _SpaceRow extends StatelessWidget {
     required this.pinned,
     required this.onTap,
   });
-
   final LibraryEntry entry;
   final int materials;
   final int folders;
@@ -932,7 +902,7 @@ class _SpaceRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          minHeight: 92,
+          constraints: const BoxConstraints(minHeight: 92),
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
             border: Border.all(color: scheme.outlineVariant),
@@ -951,8 +921,8 @@ class _SpaceRow extends StatelessWidget {
               const SizedBox(width: 11),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -1002,7 +972,7 @@ class _CreateSpace extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          minHeight: 92,
+          constraints: const BoxConstraints(minHeight: 92),
           padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
             border: Border.all(color: scheme.outlineVariant),
@@ -1040,28 +1010,10 @@ Color _entryColor(BuildContext context, LibraryEntry entry) {
 }
 
 String _longDate(DateTime date) {
-  const weekdays = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
+  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
   return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
 }
