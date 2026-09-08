@@ -403,8 +403,15 @@ class _ActiveStudy extends StatelessWidget {
                   if (pageText != null)
                     Row(
                       children: [
-                        Text(pageText, style: Theme.of(context).textTheme.labelMedium),
-                        const Spacer(),
+                        Expanded(
+                          child: Text(
+                            pageText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
                         Text(
                           '${(fraction * 100).round()}%',
                           style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -488,11 +495,15 @@ class _TodayPanel extends StatelessWidget {
             children: [
               Icon(Icons.timer_outlined, size: 17, color: palette.research),
               const SizedBox(width: 6),
-              Text(
-                '${workspace.minutesThisWeek} min focused',
-                style: Theme.of(context).textTheme.labelMedium,
+              Expanded(
+                child: Text(
+                  '${workspace.minutesThisWeek} min focused',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 6),
               TextButton.icon(
                 onPressed: onInbox,
                 icon: const Icon(Icons.inbox_outlined, size: 17),
