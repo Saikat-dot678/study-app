@@ -60,7 +60,7 @@ class ConnectLibraryView extends StatelessWidget {
                             const SizedBox(width: 16),
                             Expanded(
                               child: Text(
-                                'Study Library',
+                                'Library',
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                             ),
