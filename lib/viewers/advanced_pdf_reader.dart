@@ -62,10 +62,8 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
             hintText: '1–$pageCount',
             suffixText: '/ $pageCount',
           ),
-          onSubmitted: (_) => Navigator.pop(
-            dialogContext,
-            int.tryParse(field.text.trim()),
-          ),
+          onSubmitted: (_) =>
+              Navigator.pop(dialogContext, int.tryParse(field.text.trim())),
         ),
         actions: [
           TextButton(
@@ -73,10 +71,8 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              int.tryParse(field.text.trim()),
-            ),
+            onPressed: () =>
+                Navigator.pop(dialogContext, int.tryParse(field.text.trim())),
             child: const Text('Go'),
           ),
         ],
@@ -103,9 +99,7 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
+                    color: Theme.of(context).colorScheme.primary
                         .withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -124,7 +118,8 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
                 minLines: 3,
                 maxLines: 8,
                 decoration: const InputDecoration(
-                  hintText: 'Write an explanation, doubt, formula, or reminder…',
+                  hintText:
+                      'Write an explanation, doubt, formula, or reminder…',
                 ),
               ),
             ],
@@ -157,7 +152,9 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
     }
   }
 
-  Future<void> _highlightSelection(PdfViewerContextMenuBuilderParams params) async {
+  Future<void> _highlightSelection(
+    PdfViewerContextMenuBuilderParams params,
+  ) async {
     final ranges = await params.textSelectionDelegate.getSelectedTextRanges();
     if (ranges.isEmpty) return;
     for (final range in ranges) {
@@ -214,7 +211,10 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
         );
         final rect = pdfRect.toRectInDocument(page: page, pageRect: pageRect);
         canvas.drawRRect(
-          RRect.fromRectAndRadius(rect.inflate(0.8), const Radius.circular(2.5)),
+          RRect.fromRectAndRadius(
+            rect.inflate(0.8),
+            const Radius.circular(2.5),
+          ),
           paint,
         );
       }
@@ -258,7 +258,9 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
               annotations: workspace.annotationCount(widget.entry.path),
               thumbnailsActive: showThumbnails,
               annotationsActive: showAnnotations,
-              onPrevious: currentPage > 1 ? () => _goToPage(currentPage - 1) : null,
+              onPrevious: currentPage > 1
+                  ? () => _goToPage(currentPage - 1)
+                  : null,
               onNext: currentPage < pageCount
                   ? () => _goToPage(currentPage + 1)
                   : null,
@@ -314,17 +316,21 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
                           );
                         },
                         customizeContextMenuItems: (params, items) {
-                          if (!params.textSelectionDelegate.hasSelectedText) return;
+                          if (!params.textSelectionDelegate.hasSelectedText) {
+                            return;
+                          }
                           items.add(
                             ContextMenuButtonItem(
                               label: 'Highlight',
-                              onPressed: () => unawaited(_highlightSelection(params)),
+                              onPressed: () =>
+                                  unawaited(_highlightSelection(params)),
                             ),
                           );
                           items.add(
                             ContextMenuButtonItem(
                               label: 'Add note',
-                              onPressed: () => unawaited(_noteSelection(params)),
+                              onPressed: () =>
+                                  unawaited(_noteSelection(params)),
                             ),
                           );
                         },
@@ -368,7 +374,10 @@ class _AdvancedPdfReaderState extends State<AdvancedPdfReader> {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.sticky_note_2_rounded, size: 14),
+                                      const Icon(
+                                        Icons.sticky_note_2_rounded,
+                                        size: 14,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         '$notes',
@@ -486,7 +495,9 @@ class _PdfToolbar extends StatelessWidget {
               tooltip: 'Page thumbnails',
               onPressed: onToggleThumbnails,
               icon: Icon(
-                thumbnailsActive ? Icons.view_sidebar_rounded : Icons.grid_view_rounded,
+                thumbnailsActive
+                    ? Icons.view_sidebar_rounded
+                    : Icons.grid_view_rounded,
               ),
             ),
             const SizedBox(width: 5),
@@ -502,7 +513,10 @@ class _PdfToolbar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 onTap: onJump,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 9,
+                  ),
                   child: Text(
                     '$page / ${pageCount == 0 ? '…' : pageCount}',
                     style: const TextStyle(fontWeight: FontWeight.w900),
@@ -532,9 +546,8 @@ class _PdfToolbar extends StatelessWidget {
             if (!compact)
               Text(
                 'Select text → Highlight / Add note',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
               ),
             if (!compact) const SizedBox(width: 8),
             IconButton(
@@ -646,10 +659,8 @@ class _ThumbnailRail extends StatelessWidget {
             : ListView.separated(
                 itemCount: pageCount,
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (context, index) => SizedBox(
-                  height: 190,
-                  child: builder(context, index),
-                ),
+                itemBuilder: (context, index) =>
+                    SizedBox(height: 190, child: builder(context, index)),
               ),
       ),
     );
@@ -706,9 +717,8 @@ class _AnnotationRail extends StatelessWidget {
                       child: Text(
                         'Select PDF text and choose Highlight or Add note. Page notes also appear here.',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
                       ),
                     ),
                   )
@@ -853,7 +863,10 @@ class _AnnotationCard extends StatelessWidget {
                 },
                 itemBuilder: (_) => [
                   if (onEdit != null)
-                    const PopupMenuItem(value: 'edit', child: Text('Edit note')),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit note'),
+                    ),
                   const PopupMenuItem(value: 'delete', child: Text('Delete')),
                 ],
               ),

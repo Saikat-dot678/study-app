@@ -93,17 +93,19 @@ You still need the normal Flutter platform build prerequisites for that operatin
 
 ## Desktop UX
 
-At widths of roughly 980px and above, Study switches to a desktop shell with:
+Study adapts its navigation to the space available:
 
-- persistent navigation sidebar,
+- an expanded navigation sidebar at 1120 logical pixels and above,
+- a compact desktop/tablet rail from 720 to 1119 logical pixels,
+- touch-first bottom navigation below 720 logical pixels,
 - wide content workspace,
 - command-style library search,
 - desktop add/refresh controls,
 - adaptive cards and file grids,
 - `Ctrl+K` / `Cmd+K` search,
-- `Alt+1`, `Alt+2`, `Alt+3` navigation shortcuts.
+- `Alt+1` through `Alt+5` navigation shortcuts.
 
-Below that breakpoint it returns to the compact touch-first navigation used on phones and tablets.
+Home leads with the next useful study action, today's agenda, recent progress and real library spaces instead of a generic metrics dashboard.
 
 ## CI
 

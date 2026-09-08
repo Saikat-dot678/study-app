@@ -78,7 +78,10 @@ class _SearchPageState extends State<SearchPage> {
                     const SizedBox(height: 18),
                     TextField(
                       controller: input,
-                      autofocus: MediaQuery.sizeOf(context).width >= 980,
+                      // Search can live in an offstage adaptive page stack.
+                      // Request focus explicitly through Ctrl+K instead of
+                      // stealing it while Home is opening.
+                      autofocus: false,
                       onChanged: (value) => setState(() => query = value),
                       onSubmitted: (_) {
                         if (results.isNotEmpty) open(results.first);

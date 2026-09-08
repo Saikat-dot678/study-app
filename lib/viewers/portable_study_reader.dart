@@ -46,14 +46,22 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
-          return _PortableFallback(entry: widget.entry, onExternal: widget.onExternal);
+        if (snapshot.hasError ||
+            snapshot.data == null ||
+            snapshot.data!.isEmpty) {
+          return _PortableFallback(
+            entry: widget.entry,
+            onExternal: widget.onExternal,
+          );
         }
         final sections = snapshot.data!.sections
             .where((section) => section.body.trim().isNotEmpty)
             .toList();
         if (sections.isEmpty) {
-          return _PortableFallback(entry: widget.entry, onExternal: widget.onExternal);
+          return _PortableFallback(
+            entry: widget.entry,
+            onExternal: widget.onExternal,
+          );
         }
         currentSection = currentSection.clamp(0, sections.length - 1);
         final width = MediaQuery.sizeOf(context).width;
@@ -90,14 +98,14 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
                 isSlides: isSlides,
                 isBook: isBook,
                 notes: workspace.annotationCount(widget.entry.path),
-                onPrevious: currentSection > 0 ? () => _goTo(currentSection - 1) : null,
+                onPrevious: currentSection > 0
+                    ? () => _goTo(currentSection - 1)
+                    : null,
                 onNext: currentSection < sections.length - 1
                     ? () => _goTo(currentSection + 1)
                     : null,
                 onJump: () => _jumpDialog(sections.length),
-                onNavigator: wide
-                    ? null
-                    : () => _showMobileSections(sections),
+                onNavigator: wide ? null : () => _showMobileSections(sections),
                 onNote: () => _addNote(sections[currentSection]),
                 onKeyPoint: () => _addKeyPoint(sections[currentSection]),
                 onNotes: () {
@@ -137,12 +145,7 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
   void _goTo(int index) {
     if (!mounted) return;
     setState(() => currentSection = index);
-    unawaited(
-      widget.controller.saveProgress(
-        widget.entry,
-        page: index + 1,
-      ),
-    );
+    unawaited(widget.controller.saveProgress(widget.entry, page: index + 1));
   }
 
   Future<void> _jumpDialog(int count) async {
@@ -155,11 +158,12 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
           controller: field,
           autofocus: true,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(hintText: '1–$count', suffixText: '/ $count'),
-          onSubmitted: (_) => Navigator.pop(
-            dialogContext,
-            int.tryParse(field.text.trim()),
+          decoration: InputDecoration(
+            hintText: '1–$count',
+            suffixText: '/ $count',
           ),
+          onSubmitted: (_) =>
+              Navigator.pop(dialogContext, int.tryParse(field.text.trim())),
         ),
         actions: [
           TextButton(
@@ -167,10 +171,8 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              int.tryParse(field.text.trim()),
-            ),
+            onPressed: () =>
+                Navigator.pop(dialogContext, int.tryParse(field.text.trim())),
             child: const Text('Go'),
           ),
         ],
@@ -185,7 +187,9 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
     final note = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('${isSlides ? 'Slide' : 'Section'} ${currentSection + 1} note'),
+        title: Text(
+          '${isSlides ? 'Slide' : 'Section'} ${currentSection + 1} note',
+        ),
         content: SizedBox(
           width: 470,
           child: TextField(
@@ -226,7 +230,9 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
     final value = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Mark key point • ${isSlides ? 'slide' : 'section'} ${currentSection + 1}'),
+        title: Text(
+          'Mark key point • ${isSlides ? 'slide' : 'section'} ${currentSection + 1}',
+        ),
         content: SizedBox(
           width: 500,
           child: Column(
@@ -243,7 +249,9 @@ class _PortableStudyReaderState extends State<PortableStudyReader> {
                 autofocus: true,
                 minLines: 2,
                 maxLines: 6,
-                decoration: const InputDecoration(hintText: 'Important definition, formula, or idea…'),
+                decoration: const InputDecoration(
+                  hintText: 'Important definition, formula, or idea…',
+                ),
               ),
             ],
           ),
@@ -345,7 +353,11 @@ class _PortableToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final compact = MediaQuery.sizeOf(context).width < 720;
-    final unit = isSlides ? 'Slide' : isBook ? 'Chapter' : 'Section';
+    final unit = isSlides
+        ? 'Slide'
+        : isBook
+        ? 'Chapter'
+        : 'Section';
     return Material(
       color: scheme.surfaceContainerLow.withValues(alpha: 0.94),
       child: Padding(
@@ -371,7 +383,10 @@ class _PortableToolbar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 onTap: onJump,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 9,
+                  ),
                   child: Text(
                     '$current / $count',
                     style: const TextStyle(fontWeight: FontWeight.w900),
@@ -390,9 +405,8 @@ class _PortableToolbar extends StatelessWidget {
                 isSlides
                     ? 'Offline slide study view • exact layout opens externally'
                     : 'Offline structured reading view',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
               ),
             if (!compact) const SizedBox(width: 8),
             IconButton(
@@ -458,7 +472,10 @@ class _SectionRail extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: active
                             ? scheme.primary.withValues(alpha: 0.13)
@@ -468,7 +485,9 @@ class _SectionRail extends StatelessWidget {
                       child: Text(
                         '${index + 1}',
                         style: TextStyle(
-                          color: active ? scheme.primary : scheme.onSurfaceVariant,
+                          color: active
+                              ? scheme.primary
+                              : scheme.onSurfaceVariant,
                           fontSize: 10,
                           fontWeight: FontWeight.w900,
                         ),
@@ -476,7 +495,11 @@ class _SectionRail extends StatelessWidget {
                     ),
                     const Spacer(),
                     if (isSlides)
-                      Icon(Icons.slideshow_rounded, size: 15, color: scheme.onSurfaceVariant),
+                      Icon(
+                        Icons.slideshow_rounded,
+                        size: 15,
+                        color: scheme.onSurfaceVariant,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -484,7 +507,10 @@ class _SectionRail extends StatelessWidget {
                   section.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 5),
                 Expanded(
@@ -492,10 +518,8 @@ class _SectionRail extends StatelessWidget {
                     section.body.replaceAll('\n', ' '),
                     maxLines: grid ? 5 : 7,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant, height: 1.4),
                   ),
                 ),
               ],
@@ -523,7 +547,8 @@ class _SectionRail extends StatelessWidget {
             : ListView.separated(
                 itemCount: sections.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (_, index) => SizedBox(height: 150, child: card(index)),
+                itemBuilder: (_, index) =>
+                    SizedBox(height: 150, child: card(index)),
               ),
       ),
     );
@@ -581,7 +606,11 @@ class _SectionCanvas extends StatelessWidget {
 }
 
 class _SlideCanvas extends StatelessWidget {
-  const _SlideCanvas({required this.section, required this.page, required this.count});
+  const _SlideCanvas({
+    required this.section,
+    required this.page,
+    required this.count,
+  });
   final ExtractedSection section;
   final int page;
   final int count;
@@ -600,41 +629,39 @@ class _SlideCanvas extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const EyebrowLabel(icon: Icons.slideshow_rounded, text: 'Slide study view'),
+                  const EyebrowLabel(
+                    icon: Icons.slideshow_rounded,
+                    text: 'Slide study view',
+                  ),
                   const Spacer(),
                   Text(
                     '$page / $count',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium
+                        ?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
               const SizedBox(height: 26),
               Text(
                 section.title,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(context).textTheme.headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 18),
               Expanded(
                 child: SingleChildScrollView(
                   child: Text(
                     section.body,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      height: 1.62,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(height: 1.62, fontWeight: FontWeight.w500),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 'Study renders readable PPTX/ODP content offline. Use “Open in another app” for the original PowerPoint layout, animations, charts and embedded media.',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -665,15 +692,16 @@ class _ReadingCanvas extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           EyebrowLabel(
-            icon: isBook ? Icons.auto_stories_rounded : Icons.description_rounded,
+            icon: isBook
+                ? Icons.auto_stories_rounded
+                : Icons.description_rounded,
             text: '${isBook ? 'Chapter' : 'Section'} $page of $count',
           ),
           const SizedBox(height: 18),
           Text(
             section.title,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium
+                ?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 20),
           Text(
@@ -715,9 +743,15 @@ class _PortableNotesRail extends StatelessWidget {
             child: Row(
               children: [
                 const Expanded(
-                  child: Text('Study notes', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                  child: Text(
+                    'Study notes',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                  ),
                 ),
-                Text('${values.length}', style: TextStyle(color: scheme.onSurfaceVariant)),
+                Text(
+                  '${values.length}',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
               ],
             ),
           ),
@@ -730,9 +764,8 @@ class _PortableNotesRail extends StatelessWidget {
                       child: Text(
                         'Add a note or key point while reading. Notes stay attached to their slide or section.',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
                       ),
                     ),
                   )
@@ -745,7 +778,9 @@ class _PortableNotesRail extends StatelessWidget {
                       return Material(
                         color: item.page == currentPage
                             ? scheme.primary.withValues(alpha: 0.09)
-                            : scheme.surfaceContainerHigh.withValues(alpha: 0.48),
+                            : scheme.surfaceContainerHigh.withValues(
+                                alpha: 0.48,
+                              ),
                         borderRadius: BorderRadius.circular(14),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(14),
@@ -757,14 +792,18 @@ class _PortableNotesRail extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Page ${item.page}',
-                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                          color: scheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w800,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color: scheme.onSurfaceVariant,
+                                              fontWeight: FontWeight.w800,
+                                            ),
                                       ),
                                       const SizedBox(height: 4),
                                       if (item.text.isNotEmpty) ...[
@@ -772,7 +811,9 @@ class _PortableNotesRail extends StatelessWidget {
                                           item.text,
                                           maxLines: 3,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontWeight: FontWeight.w800),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                          ),
                                         ),
                                         const SizedBox(height: 4),
                                       ],
@@ -780,17 +821,24 @@ class _PortableNotesRail extends StatelessWidget {
                                         item.note,
                                         maxLines: 4,
                                         overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodySmall,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
                                       ),
                                     ],
                                   ),
                                 ),
                                 PopupMenuButton<String>(
                                   onSelected: (value) {
-                                    if (value == 'delete') workspace.deleteAnnotation(item.id);
+                                    if (value == 'delete') {
+                                      workspace.deleteAnnotation(item.id);
+                                    }
                                   },
                                   itemBuilder: (_) => const [
-                                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('Delete'),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -826,7 +874,8 @@ class _PortableFallback extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'Preview unavailable',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               const Text(

@@ -2,27 +2,30 @@ import 'package:flutter/material.dart';
 
 import '../controllers/library_controller.dart';
 import '../models/library_entry.dart';
+import '../models/study_metadata.dart';
 import '../viewers/viewer_page.dart';
 import '../workspace/study_workspace_controller.dart';
 import 'actions.dart';
 import 'library_widgets.dart';
-import 'motion.dart';
 import 'premium_components.dart';
 
+/// Home is a starting point, not a report.
+///
+/// It answers three questions in order: what should I do now, where did I stop,
+/// and where is my material? Every responsive branch has finite card geometry;
+/// no flex child is placed on the unbounded axis of the scroll view.
 class StudyDashboard extends StatelessWidget {
   const StudyDashboard({
     super.key,
     required this.controller,
     required this.workspace,
     required this.openLibrary,
-    required this.openSearch,
     required this.openGoals,
   });
 
   final LibraryController controller;
   final StudyWorkspaceController workspace;
   final ValueChanged<String?> openLibrary;
-  final VoidCallback openSearch;
   final VoidCallback openGoals;
 
   @override
@@ -30,129 +33,143 @@ class StudyDashboard extends StatelessWidget {
     if (!controller.connected) {
       return ConnectLibraryView(controller: controller);
     }
-    return AnimatedBuilder(
-      animation: workspace,
-      builder: (context, _) {
-        final width = MediaQuery.sizeOf(context).width;
-        final horizontal = width >= 1180 ? 30.0 : width >= 700 ? 24.0 : 16.0;
-        final today = StudyWorkspaceController.dateOnly(DateTime.now());
-        final todayTasks = workspace.tasksForDay(today);
-        final nextTask = workspace.upcomingTasks.firstOrNull;
-        final recent = controller.recentFiles.take(6).toList();
-        final spaces = controller.rootSpaces.take(7).toList();
+
+    final today = StudyWorkspaceController.dateOnly(DateTime.now());
+    final tasks = workspace.tasksForDay(today);
+    final recent = controller.recentFiles.take(8).toList();
+    final spaces = controller.rootSpaces.take(12).toList();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final contentWidth = constraints.maxWidth;
+        final horizontal = contentWidth >= 1100
+            ? 32.0
+            : contentWidth >= 680
+            ? 24.0
+            : 16.0;
         return RefreshIndicator(
           onRefresh: controller.refresh,
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(horizontal, 14, horizontal, 130),
-            children: [
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1320),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      StaggeredReveal(
-                        child: _CommandStrip(
-                          onSearch: openSearch,
-                          onImport: () => showAddSheet(
-                            context,
-                            controller,
-                            fromHome: true,
-                          ),
-                        ),
+          child: CustomScrollView(
+            key: const PageStorageKey('study-home-scroll'),
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(horizontal, 22, horizontal, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1240),
+                      child: _HomeHeader(
+                        materialCount: controller.materialCountUnder(''),
                       ),
-                      const SizedBox(height: 14),
-                      StaggeredReveal(
-                        index: 1,
-                        child: _HeroBento(
-                          controller: controller,
-                          workspace: workspace,
-                          nextTask: nextTask,
-                          onGoals: openGoals,
-                          onInbox: () => openLibrary('Inbox'),
-                          onCreateSpace: () =>
-                              showCreateSpaceSheet(context, controller),
-                        ),
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(horizontal, 20, horizontal, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1240),
+                      child: _TodayComposition(
+                        width: contentWidth,
+                        tasks: tasks,
+                        workspace: workspace,
+                        onGoals: openGoals,
+                        onInbox: () => openLibrary('Inbox'),
+                        onAdd: () =>
+                            showAddSheet(context, controller, fromHome: true),
                       ),
-                      const SizedBox(height: 14),
-                      _ResponsiveBento(
-                        children: [
-                          StaggeredReveal(
-                            index: 2,
-                            child: _TodayCard(
-                              workspace: workspace,
-                              tasks: todayTasks,
-                              onOpen: openGoals,
-                            ),
-                          ),
-                          StaggeredReveal(
-                            index: 3,
-                            child: _MomentumCard(workspace: workspace),
-                          ),
-                          StaggeredReveal(
-                            index: 4,
-                            child: _GoalsCard(
-                              workspace: workspace,
-                              onOpen: openGoals,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (recent.isNotEmpty) ...[
-                        const SizedBox(height: 30),
-                        _SectionHeader(
-                          eyebrow: 'RESUME',
-                          title: 'Continue learning',
-                          subtitle:
-                              'Your recent material, exactly where you left it.',
-                          action: 'Library',
+                    ),
+                  ),
+                ),
+              ),
+              if (recent.isNotEmpty) ...[
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(horizontal, 32, horizontal, 12),
+                  sliver: SliverToBoxAdapter(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1240),
+                        child: _SectionHeading(
+                          label: 'Continue',
+                          title: 'Pick up where you left off',
+                          action: 'View library',
                           onAction: () => openLibrary(null),
                         ),
-                        const SizedBox(height: 13),
-                        SizedBox(
-                          height: 210,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: recent.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              final entry = recent[index];
-                              return SizedBox(
-                                width: width < 520 ? 280 : 320,
-                                child: _ContinueCard(
-                                  entry: entry,
-                                  progress: controller.progressFor(entry.path)?.fraction ?? 0,
-                                  onTap: () => openStudyViewer(
-                                    context,
-                                    controller,
-                                    entry,
-                                  ),
-                                ),
-                              );
-                            },
+                      ),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 190,
+                    child: ListView.separated(
+                      key: const PageStorageKey('home-recent'),
+                      scrollDirection: Axis.horizontal,
+                      padding: EdgeInsets.symmetric(horizontal: horizontal),
+                      itemCount: recent.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final entry = recent[index];
+                        return SizedBox(
+                          width: contentWidth < 520 ? 276 : 304,
+                          child: _RecentMaterialCard(
+                            entry: entry,
+                            progress: controller.progressFor(entry.path),
+                            onTap: () =>
+                                openStudyViewer(context, controller, entry),
                           ),
-                        ),
-                      ],
-                      const SizedBox(height: 30),
-                      _SectionHeader(
-                        eyebrow: 'SPACES',
-                        title: 'Your study universe',
-                        subtitle:
-                            'Semester, GATE, research, projects — one hierarchy, no artificial limits.',
-                        action: 'Open library',
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(horizontal, 32, horizontal, 12),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1240),
+                      child: _SectionHeading(
+                        label: 'Library',
+                        title: 'Study spaces',
+                        action: 'Browse all',
                         onAction: () => openLibrary(null),
                       ),
-                      const SizedBox(height: 13),
-                      _SpaceGrid(
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(horizontal, 0, horizontal, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1240),
+                      child: _SpacesWrap(
                         controller: controller,
                         spaces: spaces,
                         onOpen: (path) => openLibrary(path),
-                        onCreate: () => showCreateSpaceSheet(context, controller),
+                        onCreate: () =>
+                            showCreateSpaceSheet(context, controller),
                       ),
-                      const SizedBox(height: 30),
-                      _LibraryPulse(controller: controller),
-                    ],
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(horizontal, 30, horizontal, 120),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1240),
+                      child: _LibrarySummary(
+                        controller: controller,
+                        workspace: workspace,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -164,177 +181,181 @@ class StudyDashboard extends StatelessWidget {
   }
 }
 
-class _CommandStrip extends StatelessWidget {
-  const _CommandStrip({required this.onSearch, required this.onImport});
-  final VoidCallback onSearch;
-  final VoidCallback onImport;
+class _HomeHeader extends StatelessWidget {
+  const _HomeHeader({required this.materialCount});
+
+  final int materialCount;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Row(
+    final now = DateTime.now();
+    final greeting = now.hour < 12
+        ? 'Good morning'
+        : now.hour < 17
+        ? 'Good afternoon'
+        : 'Good evening';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: GlassPanel(
-            radius: 18,
-            padding: EdgeInsets.zero,
-            onTap: onSearch,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-              child: Row(
-                children: [
-                  Icon(Icons.auto_awesome_rounded, color: scheme.primary, size: 19),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Find anything in your study system…',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: scheme.onSurfaceVariant),
-                    ),
-                  ),
-                  if (MediaQuery.sizeOf(context).width > 600)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Text(
-                        'CTRL K',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+        Text(
+          _longDate(now).toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.primary,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.1,
           ),
         ),
-        const SizedBox(width: 10),
-        IconButton.filledTonal(
-          tooltip: 'Add material',
-          onPressed: onImport,
-          icon: const Icon(Icons.add_rounded),
+        const SizedBox(height: 6),
+        Text('$greeting.', style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 5),
+        Text(
+          '$materialCount local material${materialCount == 1 ? '' : 's'} ready when you are.',
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: scheme.onSurfaceVariant),
         ),
       ],
     );
   }
 }
 
-class _HeroBento extends StatelessWidget {
-  const _HeroBento({
-    required this.controller,
+class _TodayComposition extends StatelessWidget {
+  const _TodayComposition({
+    required this.width,
+    required this.tasks,
     required this.workspace,
-    required this.nextTask,
     required this.onGoals,
     required this.onInbox,
-    required this.onCreateSpace,
+    required this.onAdd,
   });
 
-  final LibraryController controller;
+  final double width;
+  final List<StudyTask> tasks;
   final StudyWorkspaceController workspace;
-  final StudyTask? nextTask;
   final VoidCallback onGoals;
   final VoidCallback onInbox;
-  final VoidCallback onCreateSpace;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final next =
+        tasks.where((item) => !item.completed).firstOrNull ??
+        workspace.upcomingTasks.firstOrNull;
+    final primary = _FocusBrief(
+      next: next,
+      onGoals: onGoals,
+      onAdd: onAdd,
+      onInbox: onInbox,
+    );
+    final agenda = _TodayAgenda(
+      tasks: tasks,
+      workspace: workspace,
+      onOpen: onGoals,
+    );
+
+    if (width < 820) {
+      return Column(children: [primary, const SizedBox(height: 12), agenda]);
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 7, child: primary),
+        const SizedBox(width: 12),
+        Expanded(flex: 5, child: agenda),
+      ],
+    );
+  }
+}
+
+class _FocusBrief extends StatelessWidget {
+  const _FocusBrief({
+    required this.next,
+    required this.onGoals,
+    required this.onAdd,
+    required this.onInbox,
+  });
+
+  final StudyTask? next;
+  final VoidCallback onGoals;
+  final VoidCallback onAdd;
+  final VoidCallback onInbox;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final width = MediaQuery.sizeOf(context).width;
-    final wide = width > 840;
-    final hour = DateTime.now().hour;
-    final greeting = hour < 12
-        ? 'Good morning'
-        : hour < 17
-        ? 'Good afternoon'
-        : 'Good evening';
-    final materialCount = controller.allEntries.where((e) => !e.isDirectory).length;
-    final next = nextTask;
-    return GradientBorderCard(
-      padding: EdgeInsets.all(wide ? 28 : 21),
-      child: Stack(
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.primary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            right: -50,
-            top: -70,
-            child: IgnorePointer(
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      scheme.secondary.withValues(alpha: 0.17),
-                      scheme.secondary.withValues(alpha: 0),
-                    ],
-                  ),
+          Row(
+            children: [
+              Icon(Icons.bolt_rounded, color: scheme.onPrimary, size: 18),
+              const SizedBox(width: 7),
+              Text(
+                'NEXT MOVE',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onPrimary.withValues(alpha: 0.82),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            next?.title ?? 'Shape a focused day',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.headlineMedium
+                ?.copyWith(color: scheme.onPrimary, height: 1.08),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            next == null
+                ? 'Choose one outcome, protect the time, and keep your materials close.'
+                : '${next!.estimatedMinutes} min  •  ${_relativeDate(next!.dueDate)}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: scheme.onPrimary.withValues(alpha: 0.78),
+              height: 1.35,
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 9,
+            runSpacing: 9,
             children: [
-              Row(
-                children: [
-                  const EyebrowLabel(
-                    icon: Icons.bolt_rounded,
-                    text: 'Study OS',
-                  ),
-                  const Spacer(),
-                  Text(
-                    '$materialCount materials • offline',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: wide ? 38 : 28),
-              Text(
-                '$greeting.\nMake today count.',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontSize: wide ? 48 : 34,
-                  height: 0.96,
-                  letterSpacing: -1.7,
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: scheme.onPrimary,
+                  foregroundColor: scheme.primary,
                 ),
-              ),
-              const SizedBox(height: 13),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: Text(
+                onPressed: onGoals,
+                icon: Icon(
                   next == null
-                      ? 'Your library, goals, focus sessions and reading progress now live in one calm workspace.'
-                      : 'Next up: ${next.title} • ${_friendlyDate(next.dueDate)} • ${next.estimatedMinutes} min',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    height: 1.45,
-                  ),
+                      ? Icons.add_task_rounded
+                      : Icons.play_arrow_rounded,
                 ),
+                label: Text(next == null ? 'Plan today' : 'Open agenda'),
               ),
-              const SizedBox(height: 22),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  FilledButton.icon(
-                    onPressed: onGoals,
-                    icon: const Icon(Icons.calendar_month_rounded),
-                    label: Text(next == null ? 'Plan today' : 'Open agenda'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: onInbox,
-                    icon: const Icon(Icons.inbox_rounded),
-                    label: const Text('Inbox'),
-                  ),
-                  TextButton.icon(
-                    onPressed: onCreateSpace,
-                    icon: const Icon(Icons.add_box_outlined),
-                    label: const Text('New space'),
-                  ),
-                ],
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: scheme.onPrimary),
+                onPressed: onAdd,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add material'),
+              ),
+              IconButton(
+                tooltip: 'Open Inbox',
+                style: IconButton.styleFrom(foregroundColor: scheme.onPrimary),
+                onPressed: onInbox,
+                icon: const Icon(Icons.inbox_outlined),
               ),
             ],
           ),
@@ -344,45 +365,15 @@ class _HeroBento extends StatelessWidget {
   }
 }
 
-class _ResponsiveBento extends StatelessWidget {
-  const _ResponsiveBento({required this.children});
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    if (width < 760) {
-      return Column(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            children[i],
-          ],
-        ],
-      );
-    }
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(flex: 5, child: children[0]),
-        const SizedBox(width: 12),
-        Expanded(flex: 3, child: children[1]),
-        const SizedBox(width: 12),
-        Expanded(flex: 4, child: children[2]),
-      ],
-    );
-  }
-}
-
-class _TodayCard extends StatelessWidget {
-  const _TodayCard({
-    required this.workspace,
+class _TodayAgenda extends StatelessWidget {
+  const _TodayAgenda({
     required this.tasks,
+    required this.workspace,
     required this.onOpen,
   });
 
-  final StudyWorkspaceController workspace;
   final List<StudyTask> tasks;
+  final StudyWorkspaceController workspace;
   final VoidCallback onOpen;
 
   @override
@@ -390,279 +381,212 @@ class _TodayCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final complete = tasks.where((item) => item.completed).length;
     final fraction = tasks.isEmpty ? 0.0 : complete / tasks.length;
-    final next = tasks.where((item) => !item.completed).firstOrNull;
+    final pending = tasks.where((item) => !item.completed).take(2).toList();
     return GlassPanel(
       onTap: onOpen,
-      glow: true,
+      padding: const EdgeInsets.all(20),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.today_rounded, color: scheme.primary),
-              const SizedBox(width: 9),
-              const Text('Today', style: TextStyle(fontWeight: FontWeight.w900)),
-              const Spacer(),
-              Icon(Icons.arrow_outward_rounded, color: scheme.onSurfaceVariant, size: 18),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              MetricRing(
-                value: fraction,
-                center: Text(
-                  '${(fraction * 100).round()}%',
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+              const Icon(Icons.today_outlined, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Today',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tasks.isEmpty ? 'A clear day' : '$complete / ${tasks.length} done',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      next?.title ?? 'Add a task or goal when you are ready.',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MomentumCard extends StatelessWidget {
-  const _MomentumCard({required this.workspace});
-  final StudyWorkspaceController workspace;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final now = DateTime.now();
-    final values = List<double>.generate(
-      7,
-      (index) => workspace
-          .minutesOn(now.subtract(Duration(days: 6 - index)))
-          .toDouble(),
-    );
-    return GlassPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.local_fire_department_rounded, color: scheme.tertiary),
-              const SizedBox(width: 8),
-              const Text('Momentum', style: TextStyle(fontWeight: FontWeight.w900)),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            '${workspace.studyStreak}',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
-          ),
-          Text(
-            workspace.studyStreak == 1 ? 'day streak' : 'day streak',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const Spacer(),
-          TinySparkline(values: values),
-          const SizedBox(height: 5),
-          Text(
-            '${workspace.minutesThisWeek} min this week',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GoalsCard extends StatelessWidget {
-  const _GoalsCard({required this.workspace, required this.onOpen});
-  final StudyWorkspaceController workspace;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final goals = workspace.activeGoals.take(3).toList();
-    return GlassPanel(
-      onTap: onOpen,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.flag_circle_rounded, color: scheme.secondary),
-              const SizedBox(width: 8),
-              const Text('Goals', style: TextStyle(fontWeight: FontWeight.w900)),
-              const Spacer(),
               Text(
-                '${workspace.activeGoals.length} active',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                tasks.isEmpty ? 'Open' : '$complete/${tasks.length}',
+                style: Theme.of(context).textTheme.labelMedium
+                    ?.copyWith(color: scheme.onSurfaceVariant),
               ),
+              const SizedBox(width: 5),
+              const Icon(Icons.arrow_forward_rounded, size: 17),
             ],
           ),
           const SizedBox(height: 15),
-          if (goals.isEmpty)
-            Expanded(
-              child: Center(
-                child: Text(
-                  'No active goals yet.\nTurn an intention into a plan.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 5,
+              backgroundColor: scheme.surfaceContainerHigh,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (pending.isEmpty)
+            Text(
+              tasks.isEmpty
+                  ? 'Nothing scheduled. Use the space for deep work or plan a small next step.'
+                  : 'Everything planned for today is complete.',
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: scheme.onSurfaceVariant, height: 1.4),
             )
           else
-            for (final goal in goals) ...[
-              _GoalLine(goal: goal, progress: workspace.goalProgress(goal)),
-              if (goal != goals.last) const SizedBox(height: 12),
+            for (var i = 0; i < pending.length; i++) ...[
+              _AgendaLine(task: pending[i]),
+              if (i != pending.length - 1) const SizedBox(height: 11),
             ],
+          const SizedBox(height: 15),
+          Text(
+            '${workspace.minutesThisWeek} focused min this week  •  ${workspace.studyStreak} day streak',
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
   }
 }
 
-class _GoalLine extends StatelessWidget {
-  const _GoalLine({required this.goal, required this.progress});
-  final StudyGoal goal;
-  final double progress;
+class _AgendaLine extends StatelessWidget {
+  const _AgendaLine({required this.task});
+  final StudyTask task;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final color = switch (task.priority) {
+      StudyPriority.high => scheme.tertiary,
+      StudyPriority.normal => scheme.primary,
+      StudyPriority.low => scheme.secondary,
+    };
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                goal.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              _compactDate(goal.dueDate),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 5,
-            backgroundColor: scheme.onSurface.withValues(alpha: 0.07),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            task.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '${task.estimatedMinutes}m',
+          style: Theme.of(context).textTheme.labelSmall
+              ?.copyWith(color: scheme.onSurfaceVariant),
         ),
       ],
     );
   }
 }
 
-class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({
+    required this.label,
+    required this.title,
+    required this.action,
+    required this.onAction,
+  });
+
+  final String label;
+  final String title;
+  final String action;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+            ],
+          ),
+        ),
+        TextButton(onPressed: onAction, child: Text(action)),
+      ],
+    );
+  }
+}
+
+class _RecentMaterialCard extends StatelessWidget {
+  const _RecentMaterialCard({
     required this.entry,
     required this.progress,
     required this.onTap,
   });
+
   final LibraryEntry entry;
-  final double progress;
+  final StudyProgress? progress;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final value = progress?.fraction ?? 0;
     return GlassPanel(
       onTap: onTap,
-      glow: true,
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              FileIcon(entry: entry, large: true, heroTag: 'entry:${entry.path}'),
+              FileIcon(entry: entry),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(99),
-                  color: scheme.primary.withValues(alpha: 0.10),
-                ),
-                child: Text(
-                  '${(progress * 100).round()}%',
-                  style: TextStyle(
-                    color: scheme.primary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 11,
-                  ),
-                ),
+              Icon(
+                Icons.arrow_outward_rounded,
+                size: 18,
+                color: scheme.onSurfaceVariant,
               ),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 14),
           Text(
             entry.name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 4),
-          Text(
-            entry.path,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 13),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(
-              value: progress <= 0 ? 0.02 : progress,
-              minHeight: 5,
-              backgroundColor: scheme.onSurface.withValues(alpha: 0.07),
-            ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: value,
+                    minHeight: 4,
+                    backgroundColor: scheme.surfaceContainerHigh,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                value > 0
+                    ? '${(value * 100).round()}%'
+                    : entry.extension.toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -670,13 +594,14 @@ class _ContinueCard extends StatelessWidget {
   }
 }
 
-class _SpaceGrid extends StatelessWidget {
-  const _SpaceGrid({
+class _SpacesWrap extends StatelessWidget {
+  const _SpacesWrap({
     required this.controller,
     required this.spaces,
     required this.onOpen,
     required this.onCreate,
   });
+
   final LibraryController controller;
   final List<LibraryEntry> spaces;
   final ValueChanged<String> onOpen;
@@ -684,40 +609,59 @@ class _SpaceGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final columns = width > 1160 ? 4 : width > 760 ? 3 : width > 430 ? 2 : 1;
-    final cards = <Widget>[
-      for (final space in spaces)
-        _SpaceCard(
-          entry: space,
-          materials: controller.materialCountUnder(space.path),
-          folders: controller.directFolderCount(space.path),
-          onTap: () => onOpen(space.path),
-        ),
-      _NewSpaceCard(onTap: onCreate),
-    ];
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: columns,
-      mainAxisSpacing: 11,
-      crossAxisSpacing: 11,
-      childAspectRatio: columns == 1 ? 2.0 : 1.38,
-      children: cards,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 1050
+            ? 4
+            : constraints.maxWidth >= 700
+            ? 3
+            : constraints.maxWidth >= 420
+            ? 2
+            : 1;
+        const gap = 12.0;
+        final itemWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final space in spaces)
+              SizedBox(
+                width: itemWidth,
+                height: 142,
+                child: _SpaceTile(
+                  entry: space,
+                  materials: controller.materialCountUnder(space.path),
+                  folders: controller.directFolderCount(space.path),
+                  pinned: controller.isPinned(space.path),
+                  onTap: () => onOpen(space.path),
+                ),
+              ),
+            SizedBox(
+              width: itemWidth,
+              height: 142,
+              child: _NewSpaceTile(onTap: onCreate),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _SpaceCard extends StatelessWidget {
-  const _SpaceCard({
+class _SpaceTile extends StatelessWidget {
+  const _SpaceTile({
     required this.entry,
     required this.materials,
     required this.folders,
+    required this.pinned,
     required this.onTap,
   });
+
   final LibraryEntry entry;
   final int materials;
   final int folders;
+  final bool pinned;
   final VoidCallback onTap;
 
   @override
@@ -731,37 +675,26 @@ class _SpaceCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 43,
-                height: 43,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  gradient: LinearGradient(
-                    colors: [
-                      scheme.primary.withValues(alpha: 0.24),
-                      scheme.secondary.withValues(alpha: 0.10),
-                    ],
-                  ),
-                ),
-                child: Icon(Icons.folder_rounded, color: scheme.primary),
-              ),
+              Icon(Icons.folder_rounded, color: scheme.primary, size: 27),
               const Spacer(),
-              Icon(Icons.north_east_rounded, size: 18, color: scheme.onSurfaceVariant),
+              if (pinned)
+                Icon(Icons.push_pin_rounded, color: scheme.tertiary, size: 16),
             ],
           ),
           const Spacer(),
           Text(
             entry.name,
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+            style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 4),
           Text(
-            '$folders folders • $materials materials',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
+            '$materials material${materials == 1 ? '' : 's'}  •  $folders folder${folders == 1 ? '' : 's'}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -769,40 +702,42 @@ class _SpaceCard extends StatelessWidget {
   }
 }
 
-class _NewSpaceCard extends StatelessWidget {
-  const _NewSpaceCard({required this.onTap});
+class _NewSpaceTile extends StatelessWidget {
+  const _NewSpaceTile({required this.onTap});
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return HoverLift(
-      child: Material(
-        color: scheme.primary.withValues(alpha: 0.055),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: scheme.primary.withValues(alpha: 0.28)),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(17),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.add_circle_outline_rounded, color: scheme.primary, size: 32),
-                const Spacer(),
-                const Text('Create a space', style: TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(
-                  'Semester, exam, research or blank',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
+    return Material(
+      color: scheme.primary.withValues(alpha: 0.045),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: scheme.primary.withValues(alpha: 0.3)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.add_circle_outline_rounded, color: scheme.primary),
+              const Spacer(),
+              Text(
+                'New study space',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Start blank or from a structure',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
           ),
         ),
       ),
@@ -810,45 +745,48 @@ class _NewSpaceCard extends StatelessWidget {
   }
 }
 
-class _LibraryPulse extends StatelessWidget {
-  const _LibraryPulse({required this.controller});
+class _LibrarySummary extends StatelessWidget {
+  const _LibrarySummary({required this.controller, required this.workspace});
+
   final LibraryController controller;
+  final StudyWorkspaceController workspace;
 
   @override
   Widget build(BuildContext context) {
-    final files = controller.allEntries.where((item) => !item.isDirectory).length;
-    final favorites = controller.favoriteEntries.where((item) => !item.isDirectory).length;
-    final annotations = StudyWorkspaceController.instance.annotations.length;
-    return GlassPanel(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        runAlignment: WrapAlignment.center,
-        spacing: 22,
-        runSpacing: 13,
-        children: [
-          _PulseMetric(icon: Icons.layers_rounded, value: '$files', label: 'materials'),
-          _PulseMetric(
-            icon: Icons.folder_special_rounded,
-            value: '${controller.rootSpaces.length}',
-            label: 'spaces',
-          ),
-          _PulseMetric(icon: Icons.star_rounded, value: '$favorites', label: 'starred'),
-          _PulseMetric(
-            icon: Icons.draw_rounded,
-            value: '$annotations',
-            label: 'annotations',
-          ),
-          const _PulseMetric(icon: Icons.lock_rounded, value: '100%', label: 'offline'),
-        ],
+    final files = controller.materialCountUnder('');
+    final favorites = controller.favoriteEntries
+        .where((entry) => !entry.isDirectory)
+        .length;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 18),
+        child: Wrap(
+          spacing: 26,
+          runSpacing: 12,
+          children: [
+            _SummaryMetric(value: '$files', label: 'materials'),
+            _SummaryMetric(
+              value: '${controller.rootSpaces.length}',
+              label: 'spaces',
+            ),
+            _SummaryMetric(value: '$favorites', label: 'starred'),
+            _SummaryMetric(
+              value: '${workspace.annotations.length}',
+              label: 'annotations',
+            ),
+            const _SummaryMetric(value: 'Local', label: 'storage mode'),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _PulseMetric extends StatelessWidget {
-  const _PulseMetric({required this.icon, required this.value, required this.label});
-  final IconData icon;
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({required this.value, required this.label});
   final String value;
   final String label;
 
@@ -858,103 +796,53 @@ class _PulseMetric extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: scheme.primary, size: 18),
-        const SizedBox(width: 7),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
-        const SizedBox(width: 4),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(width: 5),
         Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
+          style: Theme.of(context).textTheme.labelMedium
+              ?.copyWith(color: scheme.onSurfaceVariant),
         ),
       ],
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.eyebrow,
-    required this.title,
-    required this.subtitle,
-    this.action,
-    this.onAction,
-  });
-  final String eyebrow;
-  final String title;
-  final String subtitle;
-  final String? action;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                eyebrow,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: scheme.primary,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.25,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (action != null && onAction != null)
-          TextButton(onPressed: onAction, child: Text(action!)),
-      ],
-    );
-  }
+String _longDate(DateTime date) {
+  const weekdays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
 }
 
-String _friendlyDate(DateTime date) {
+String _relativeDate(DateTime date) {
   final today = StudyWorkspaceController.dateOnly(DateTime.now());
   final target = StudyWorkspaceController.dateOnly(date);
   final days = target.difference(today).inDays;
-  if (days == 0) return 'today';
-  if (days == 1) return 'tomorrow';
-  if (days < 7 && days > 1) return 'in $days days';
-  return _compactDate(date);
-}
-
-String _compactDate(DateTime date) {
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return '${date.day} ${months[date.month - 1]}';
+  if (days == 0) return 'due today';
+  if (days == 1) return 'due tomorrow';
+  if (days > 1 && days < 7) return 'due in $days days';
+  return 'due ${date.day}/${date.month}';
 }
 
 extension _FirstOrNull<T> on Iterable<T> {

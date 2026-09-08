@@ -4,8 +4,9 @@ import 'package:study_app/controllers/library_controller.dart';
 import 'package:study_app/models/library_entry.dart';
 import 'package:study_app/models/study_metadata.dart';
 import 'package:study_app/theme.dart';
-import 'package:study_app/ui/home_page.dart';
 import 'package:study_app/ui/library_page.dart';
+import 'package:study_app/ui/study_dashboard.dart';
+import 'package:study_app/workspace/study_workspace_controller.dart';
 
 void main() {
   const sizes = [
@@ -40,10 +41,11 @@ void main() {
               child: child!,
             ),
             home: Scaffold(
-              body: HomePage(
+              body: StudyDashboard(
                 controller: controller,
+                workspace: StudyWorkspaceController.instance,
                 openLibrary: (_) {},
-                openSearch: () {},
+                openGoals: () {},
               ),
             ),
           ),

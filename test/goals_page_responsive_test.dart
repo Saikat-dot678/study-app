@@ -15,7 +15,9 @@ void main() {
     Size(800, 1000),
     Size(1366, 768),
   ]) {
-    testWidgets('goals planner fits ${size.width}x${size.height}', (tester) async {
+    testWidgets('goals planner fits ${size.width}x${size.height}', (
+      tester,
+    ) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);

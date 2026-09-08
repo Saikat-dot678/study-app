@@ -57,20 +57,24 @@ void main() {
     expect(result.sections.single.body, contains('4'));
   });
 
-  test('EPUB follows the package spine instead of alphabetical filenames', () async {
-    final path = await document('epub', {
-      'META-INF/container.xml': '<container><rootfiles><rootfile full-path="OPS/book.opf"/></rootfiles></container>',
-      'OPS/book.opf': '<package><manifest><item id="first" href="z.xhtml"/><item id="second" href="a.xhtml"/></manifest><spine><itemref idref="first"/><itemref idref="second"/></spine></package>',
-      'OPS/a.xhtml': '<html><body><h1>Second chapter</h1><p>Transactions</p></body></html>',
-      'OPS/z.xhtml': '<html><body><h1>First chapter</h1><p>Normalization</p></body></html>',
-    });
-    final result = await extractPortableDocument(path, 'epub');
-    expect(result.sections.first.title, 'First chapter');
-    expect(result.sections.last.title, 'Second chapter');
-  });
+  test(
+    'EPUB follows the package spine instead of alphabetical filenames',
+    () async {
+      final path = await document('epub', {
+        'META-INF/container.xml': '<container><rootfiles><rootfile full-path="OPS/book.opf"/></rootfiles></container>',
+        'OPS/book.opf': '<package><manifest><item id="first" href="z.xhtml"/><item id="second" href="a.xhtml"/></manifest><spine><itemref idref="first"/><itemref idref="second"/></spine></package>',
+        'OPS/a.xhtml': '<html><body><h1>Second chapter</h1><p>Transactions</p></body></html>',
+        'OPS/z.xhtml': '<html><body><h1>First chapter</h1><p>Normalization</p></body></html>',
+      });
+      final result = await extractPortableDocument(path, 'epub');
+      expect(result.sections.first.title, 'First chapter');
+      expect(result.sections.last.title, 'Second chapter');
+    },
+  );
 
   test('Malformed archive reports failure without touching original', () async {
-    final file = await File('${root.path}/broken.docx').writeAsString('not a zip');
+    final file = await File('${root.path}/broken.docx')
+        .writeAsString('not a zip');
     await expectLater(
       extractPortableDocument(file.path, 'docx'),
       throwsA(isA<Exception>()),

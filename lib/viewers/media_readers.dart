@@ -10,7 +10,11 @@ import '../controllers/library_controller.dart';
 import '../models/library_entry.dart';
 
 class StudyTextReader extends StatefulWidget {
-  const StudyTextReader({super.key, required this.path, required this.markdown});
+  const StudyTextReader({
+    super.key,
+    required this.path,
+    required this.markdown,
+  });
 
   final String path;
   final bool markdown;
@@ -27,7 +31,9 @@ class _StudyTextReaderState extends State<StudyTextReader> {
     return FutureBuilder<String>(
       future: text,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
         final data = snapshot.data ?? '';
         if (widget.markdown) {
           return Markdown(
@@ -44,7 +50,8 @@ class _StudyTextReaderState extends State<StudyTextReader> {
                 constraints: const BoxConstraints(maxWidth: 860),
                 child: Text(
                   data,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.68),
+                  style: Theme.of(context).textTheme.bodyLarge
+                      ?.copyWith(height: 1.68),
                 ),
               ),
             ),
@@ -70,7 +77,8 @@ class StudyImageReader extends StatelessWidget {
         child: Image.file(
           File(path),
           fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, size: 72),
+          errorBuilder: (_, _, _) =>
+              const Icon(Icons.broken_image_outlined, size: 72),
         ),
       ),
     );
@@ -111,8 +119,11 @@ class _StudyAudioReaderState extends State<StudyAudioReader> {
   Future<void> _load() async {
     try {
       duration = await player.setFilePath(widget.path) ?? Duration.zero;
-      final saved = widget.controller.progressFor(widget.entry.path)?.position ?? Duration.zero;
-      if (saved > Duration.zero && (duration == Duration.zero || saved < duration)) {
+      final saved =
+          widget.controller.progressFor(widget.entry.path)?.position ??
+          Duration.zero;
+      if (saved > Duration.zero &&
+          (duration == Duration.zero || saved < duration)) {
         await player.seek(saved);
       }
       if (mounted) setState(() {});
@@ -123,7 +134,8 @@ class _StudyAudioReaderState extends State<StudyAudioReader> {
   }
 
   void _savePosition(Duration value) {
-    if (duration <= Duration.zero || (value - lastSaved).abs() < const Duration(seconds: 5)) {
+    if (duration <= Duration.zero ||
+        (value - lastSaved).abs() < const Duration(seconds: 5)) {
       return;
     }
     lastSaved = value;
@@ -155,7 +167,9 @@ class _StudyAudioReaderState extends State<StudyAudioReader> {
   @override
   Widget build(BuildContext context) {
     if (error != null) {
-      return const Center(child: Text('This audio codec is not supported by the device player.'));
+      return const Center(
+        child: Text('This audio codec is not supported by the device player.'),
+      );
     }
     final scheme = Theme.of(context).colorScheme;
     return Center(
@@ -186,33 +200,46 @@ class _StudyAudioReaderState extends State<StudyAudioReader> {
                     ),
                   ],
                 ),
-                child: Icon(Icons.graphic_eq_rounded, size: 94, color: scheme.primary),
+                child: Icon(
+                  Icons.graphic_eq_rounded,
+                  size: 94,
+                  color: scheme.primary,
+                ),
               ),
               const SizedBox(height: 28),
               Text(
                 widget.entry.name,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 25),
               StreamBuilder<Duration>(
                 stream: player.positionStream,
                 builder: (context, snapshot) {
                   final position = snapshot.data ?? player.position;
-                  final maxMs = duration.inMilliseconds <= 0 ? 1 : duration.inMilliseconds;
+                  final maxMs = duration.inMilliseconds <= 0
+                      ? 1
+                      : duration.inMilliseconds;
                   return Column(
                     children: [
                       Slider(
                         min: 0,
                         max: maxMs.toDouble(),
-                        value: position.inMilliseconds.clamp(0, maxMs).toDouble(),
-                        onChanged: (value) => player.seek(Duration(milliseconds: value.round())),
+                        value: position.inMilliseconds
+                            .clamp(0, maxMs)
+                            .toDouble(),
+                        onChanged: (value) =>
+                            player.seek(Duration(milliseconds: value.round())),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [Text(studyDuration(position)), Text(studyDuration(duration))],
+                          children: [
+                            Text(studyDuration(position)),
+                            Text(studyDuration(duration)),
+                          ],
                         ),
                       ),
                     ],
@@ -226,7 +253,8 @@ class _StudyAudioReaderState extends State<StudyAudioReader> {
                   IconButton.filledTonal(
                     tooltip: 'Back 10 seconds',
                     onPressed: () {
-                      final value = player.position - const Duration(seconds: 10);
+                      final value =
+                          player.position - const Duration(seconds: 10);
                       player.seek(value.isNegative ? Duration.zero : value);
                     },
                     icon: const Icon(Icons.replay_10_rounded),
@@ -241,8 +269,14 @@ class _StudyAudioReaderState extends State<StudyAudioReader> {
                           shape: const CircleBorder(),
                           padding: const EdgeInsets.all(22),
                         ),
-                        onPressed: () => playing ? player.pause() : player.play(),
-                        child: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 34),
+                        onPressed: () =>
+                            playing ? player.pause() : player.play(),
+                        child: Icon(
+                          playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 34,
+                        ),
                       );
                     },
                   ),
@@ -250,7 +284,8 @@ class _StudyAudioReaderState extends State<StudyAudioReader> {
                   IconButton.filledTonal(
                     tooltip: 'Forward 10 seconds',
                     onPressed: () {
-                      final value = player.position + const Duration(seconds: 10);
+                      final value =
+                          player.position + const Duration(seconds: 10);
                       player.seek(value > duration ? duration : value);
                     },
                     icon: const Icon(Icons.forward_10_rounded),
@@ -310,22 +345,30 @@ class _StudyVideoReaderState extends State<StudyVideoReader> {
     controller = uri.scheme == 'file'
         ? VideoPlayerController.file(File.fromUri(uri))
         : VideoPlayerController.contentUri(uri);
-    controller.initialize().then((_) async {
-      final saved = widget.libraryController.progressFor(widget.entry.path)?.position ?? Duration.zero;
-      if (saved > Duration.zero && saved < controller.value.duration) {
-        await controller.seekTo(saved);
-      }
-      controller.addListener(_onChanged);
-      if (mounted) setState(() {});
-    }).catchError((Object value) {
-      error = value;
-      if (mounted) setState(() {});
-    });
+    controller
+        .initialize()
+        .then((_) async {
+          final saved =
+              widget.libraryController
+                  .progressFor(widget.entry.path)
+                  ?.position ??
+              Duration.zero;
+          if (saved > Duration.zero && saved < controller.value.duration) {
+            await controller.seekTo(saved);
+          }
+          controller.addListener(_onChanged);
+          if (mounted) setState(() {});
+        })
+        .catchError((Object value) {
+          error = value;
+          if (mounted) setState(() {});
+        });
   }
 
   void _onChanged() {
     final position = controller.value.position;
-    if (controller.value.isInitialized && (position - lastSaved).abs() >= const Duration(seconds: 5)) {
+    if (controller.value.isInitialized &&
+        (position - lastSaved).abs() >= const Duration(seconds: 5)) {
       lastSaved = position;
       unawaited(
         widget.libraryController.saveProgress(
@@ -357,7 +400,9 @@ class _StudyVideoReaderState extends State<StudyVideoReader> {
   @override
   Widget build(BuildContext context) {
     if (error != null) {
-      return const Center(child: Text('This video codec is not supported by the device player.'));
+      return const Center(
+        child: Text('This video codec is not supported by the device player.'),
+      );
     }
     if (!controller.value.isInitialized) {
       return const Center(child: CircularProgressIndicator());
@@ -373,7 +418,9 @@ class _StudyVideoReaderState extends State<StudyVideoReader> {
           children: [
             Center(
               child: AspectRatio(
-                aspectRatio: controller.value.aspectRatio == 0 ? 16 / 9 : controller.value.aspectRatio,
+                aspectRatio: controller.value.aspectRatio == 0
+                    ? 16 / 9
+                    : controller.value.aspectRatio,
                 child: VideoPlayer(controller),
               ),
             ),
@@ -387,7 +434,11 @@ class _StudyVideoReaderState extends State<StudyVideoReader> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Color(0x55000000), Color(0x00000000), Color(0xAA000000)],
+                      colors: [
+                        Color(0x55000000),
+                        Color(0x00000000),
+                        Color(0xAA000000),
+                      ],
                     ),
                   ),
                 ),
@@ -405,9 +456,13 @@ class _StudyVideoReaderState extends State<StudyVideoReader> {
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.all(23),
                   ),
-                  onPressed: () => controller.value.isPlaying ? controller.pause() : controller.play(),
+                  onPressed: () => controller.value.isPlaying
+                      ? controller.pause()
+                      : controller.play(),
                   child: Icon(
-                    controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    controller.value.isPlaying
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
                     size: 38,
                   ),
                 ),
@@ -444,29 +499,49 @@ class _StudyVideoReaderState extends State<StudyVideoReader> {
                           IconButton(
                             tooltip: 'Back 10 seconds',
                             onPressed: () {
-                              final target = controller.value.position - const Duration(seconds: 10);
-                              controller.seekTo(target.isNegative ? Duration.zero : target);
+                              final target =
+                                  controller.value.position -
+                                  const Duration(seconds: 10);
+                              controller.seekTo(
+                                target.isNegative ? Duration.zero : target,
+                              );
                             },
-                            icon: const Icon(Icons.replay_10_rounded, color: Colors.white),
+                            icon: const Icon(
+                              Icons.replay_10_rounded,
+                              color: Colors.white,
+                            ),
                           ),
                           IconButton(
                             tooltip: 'Forward 10 seconds',
                             onPressed: () {
-                              final target = controller.value.position + const Duration(seconds: 10);
+                              final target =
+                                  controller.value.position +
+                                  const Duration(seconds: 10);
                               controller.seekTo(
-                                target > controller.value.duration ? controller.value.duration : target,
+                                target > controller.value.duration
+                                    ? controller.value.duration
+                                    : target,
                               );
                             },
-                            icon: const Icon(Icons.forward_10_rounded, color: Colors.white),
+                            icon: const Icon(
+                              Icons.forward_10_rounded,
+                              color: Colors.white,
+                            ),
                           ),
                           PopupMenuButton<double>(
                             tooltip: 'Playback speed',
                             color: Theme.of(context).colorScheme.surface,
-                            icon: const Icon(Icons.speed_rounded, color: Colors.white),
+                            icon: const Icon(
+                              Icons.speed_rounded,
+                              color: Colors.white,
+                            ),
                             onSelected: controller.setPlaybackSpeed,
                             itemBuilder: (_) => [
                               for (final speed in [0.75, 1.0, 1.25, 1.5, 2.0])
-                                PopupMenuItem(value: speed, child: Text('$speed×')),
+                                PopupMenuItem(
+                                  value: speed,
+                                  child: Text('$speed×'),
+                                ),
                             ],
                           ),
                         ],

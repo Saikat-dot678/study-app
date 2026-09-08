@@ -26,10 +26,8 @@ Future<void> openStudyViewer(
           ? Duration.zero
           : const Duration(milliseconds: 260),
       reverseTransitionDuration: const Duration(milliseconds: 190),
-      pageBuilder: (_, _, _) => StudyViewerPage(
-        controller: controller,
-        entry: entry,
-      ),
+      pageBuilder: (_, _, _) =>
+          StudyViewerPage(controller: controller, entry: entry),
       transitionsBuilder: (_, animation, _, child) {
         final curve = CurvedAnimation(
           parent: animation,
@@ -111,10 +109,7 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
           titleSpacing: 8,
           title: Row(
             children: [
-              FileIcon(
-                entry: widget.entry,
-                heroTag: 'entry:${widget.entry.path}',
-              ),
+              FileIcon(entry: widget.entry),
               const SizedBox(width: 11),
               Expanded(
                 child: Column(
@@ -124,17 +119,15 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
                       widget.entry.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     Text(
                       _viewerSubtitle(widget.entry),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall
+                          ?.copyWith(color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -147,7 +140,9 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
                 padding: const EdgeInsets.only(right: 3),
                 child: Chip(
                   avatar: const Icon(Icons.draw_rounded, size: 16),
-                  label: Text('${workspace.annotationCount(widget.entry.path)}'),
+                  label: Text(
+                    '${workspace.annotationCount(widget.entry.path)}',
+                  ),
                   visualDensity: VisualDensity.compact,
                 ),
               ),
@@ -197,9 +192,9 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
               : loadError != null
               ? _ViewerFallback(
                   entry: widget.entry,
-                  message:
-                      'This material could not be prepared for the offline study viewer.',
-                  onExternal: () => widget.controller.openExternally(widget.entry),
+                  message: 'This material could not be prepared for the offline study viewer.',
+                  onExternal: () =>
+                      widget.controller.openExternally(widget.entry),
                 )
               : _reader(),
         ),
@@ -212,37 +207,60 @@ class _StudyViewerPageState extends State<StudyViewerPage> {
     if (!entry.canPreviewInApp) {
       return _ViewerFallback(
         entry: entry,
+        message: 'This legacy or uncommon format is kept safely in your library, but needs another installed app for exact rendering.',
+        onExternal: () => widget.controller.openExternally(entry),
+      );
+    }
+    final preparedPath = localPath;
+    final preparedUri = contentUri;
+    if (entry.kind == LibraryKind.video) {
+      if (preparedUri == null || preparedUri.trim().isEmpty) {
+        return _ViewerFallback(
+          entry: entry,
+          message: 'The video could not be opened from its local library URI.',
+          onExternal: () => widget.controller.openExternally(entry),
+        );
+      }
+      return StudyVideoReader(
+        uri: preparedUri,
+        entry: entry,
+        libraryController: widget.controller,
+      );
+    }
+    if (preparedPath == null || preparedPath.trim().isEmpty) {
+      return _ViewerFallback(
+        entry: entry,
         message:
-            'This legacy or uncommon format is kept safely in your library, but needs another installed app for exact rendering.',
+            'The material could not be prepared in the local reader cache.',
         onExternal: () => widget.controller.openExternally(entry),
       );
     }
     return switch (entry.kind) {
       LibraryKind.pdf => AdvancedPdfReader(
-        path: localPath!,
+        path: preparedPath,
         entry: entry,
         libraryController: widget.controller,
       ),
       LibraryKind.note => StudyTextReader(
-        path: localPath!,
+        path: preparedPath,
         markdown: {'md', 'markdown'}.contains(entry.extension),
       ),
-      LibraryKind.image => StudyImageReader(path: localPath!),
+      LibraryKind.image => StudyImageReader(path: preparedPath),
       LibraryKind.audio => StudyAudioReader(
-        path: localPath!,
+        path: preparedPath,
         entry: entry,
         controller: widget.controller,
       ),
-      LibraryKind.video => StudyVideoReader(
-        uri: contentUri!,
+      LibraryKind.video => _ViewerFallback(
         entry: entry,
-        libraryController: widget.controller,
+        message: 'The video reader is unavailable for this item.',
+        onExternal: () => widget.controller.openExternally(entry),
       ),
       LibraryKind.book ||
       LibraryKind.slides ||
       LibraryKind.document ||
       LibraryKind.spreadsheet => PortableStudyReader(
-        path: localPath!,
+        path: preparedPath,
         entry: entry,
         controller: widget.controller,
         onExternal: () => widget.controller.openExternally(entry),
@@ -304,9 +322,8 @@ class _ViewerFallback extends StatelessWidget {
               const SizedBox(height: 18),
               Text(
                 'Still in your library',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               Text(message, textAlign: TextAlign.center),
@@ -332,7 +349,7 @@ String _viewerSubtitle(LibraryEntry entry) => switch (entry.kind) {
   LibraryKind.video => 'Video • resume, seek & playback speed',
   LibraryKind.note => 'Note • selectable offline reading',
   LibraryKind.image => 'Image • pan & zoom',
-  LibraryKind.document || LibraryKind.spreadsheet =>
-    'Document • structured offline reading',
+  LibraryKind.document ||
+  LibraryKind.spreadsheet => 'Document • structured offline reading',
   _ => fileMeta(entry),
 };

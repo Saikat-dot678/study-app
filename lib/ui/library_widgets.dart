@@ -11,56 +11,129 @@ class ConnectLibraryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        const SizedBox(height: 28),
-        Icon(
-          Icons.folder_copy_rounded,
-          size: 72,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Choose your study library folder',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Everything stays locally inside one folder you choose. Copy that folder to another phone later and reconnect it there.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 28),
-        FilledButton.icon(
-          onPressed: controller.connectLibrary,
-          icon: const Icon(Icons.create_new_folder_rounded),
-          label: const Text('Choose or connect folder'),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          'No account • no cloud • no all-files permission',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodySmall,
+    final scheme = Theme.of(context).colorScheme;
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: scheme.primary,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            Icons.folder_copy_rounded,
+                            color: scheme.onPrimary,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Your library starts with a folder.',
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Choose an existing Study Library or create a new folder. Your files remain ordinary files that you control.',
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                height: 1.45,
+                              ),
+                        ),
+                        const SizedBox(height: 22),
+                        const Wrap(
+                          spacing: 18,
+                          runSpacing: 10,
+                          children: [
+                            _LocalPromise(
+                              icon: Icons.cloud_off_outlined,
+                              label: 'No cloud required',
+                            ),
+                            _LocalPromise(
+                              icon: Icons.account_circle_outlined,
+                              label: 'No account',
+                            ),
+                            _LocalPromise(
+                              icon: Icons.move_down_rounded,
+                              label: 'Portable by design',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        FilledButton.icon(
+                          onPressed: controller.connectLibrary,
+                          icon: const Icon(Icons.create_new_folder_rounded),
+                          label: const Text('Choose or connect folder'),
+                        ),
+                        const SizedBox(height: 11),
+                        Text(
+                          'On Android, Study uses the system folder picker. On desktop, it stores only the selected path.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
   }
 }
 
+class _LocalPromise extends StatelessWidget {
+  const _LocalPromise({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 220),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 17, color: scheme.secondary),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class FileIcon extends StatelessWidget {
-  const FileIcon({
-    super.key,
-    required this.entry,
-    this.large = false,
-    this.heroTag,
-  });
+  const FileIcon({super.key, required this.entry, this.large = false});
 
   final LibraryEntry entry;
   final bool large;
-  final String? heroTag;
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +152,7 @@ class FileIcon extends StatelessWidget {
       LibraryKind.other => Icons.insert_drive_file_rounded,
     };
     final size = large ? 56.0 : 44.0;
-    final box = Container(
+    return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -91,11 +164,6 @@ class FileIcon extends StatelessWidget {
         color: Theme.of(context).colorScheme.onPrimaryContainer,
         size: large ? 31 : 23,
       ),
-    );
-    if (heroTag == null) return box;
-    return Hero(
-      tag: heroTag!,
-      child: Material(type: MaterialType.transparency, child: box),
     );
   }
 }
@@ -141,10 +209,7 @@ class FileRow extends StatelessWidget {
                 horizontal: 14,
                 vertical: 5,
               ),
-              leading: FileIcon(
-                entry: entry,
-                heroTag: entry.isDirectory ? null : 'entry:${entry.path}',
-              ),
+              leading: FileIcon(entry: entry),
               title: Text(
                 entry.name,
                 maxLines: 1,

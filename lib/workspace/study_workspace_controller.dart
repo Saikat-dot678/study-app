@@ -49,9 +49,11 @@ class StudyGoal {
     id: json['id']?.toString() ?? '',
     title: json['title']?.toString() ?? 'Goal',
     description: json['description']?.toString() ?? '',
-    dueDate: DateTime.tryParse(json['dueDate']?.toString() ?? '') ?? DateTime.now(),
+    dueDate:
+        DateTime.tryParse(json['dueDate']?.toString() ?? '') ?? DateTime.now(),
     createdAt:
-        DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+        DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+        DateTime.now(),
     targetMinutes: (json['targetMinutes'] as num?)?.toInt() ?? 0,
     completed: json['completed'] as bool? ?? false,
   );
@@ -112,9 +114,11 @@ class StudyTask {
   factory StudyTask.fromJson(Map<String, dynamic> json) => StudyTask(
     id: json['id']?.toString() ?? '',
     title: json['title']?.toString() ?? 'Task',
-    dueDate: DateTime.tryParse(json['dueDate']?.toString() ?? '') ?? DateTime.now(),
+    dueDate:
+        DateTime.tryParse(json['dueDate']?.toString() ?? '') ?? DateTime.now(),
     createdAt:
-        DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+        DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+        DateTime.now(),
     goalId: json['goalId']?.toString(),
     estimatedMinutes: math.max(
       5,
@@ -157,7 +161,8 @@ class StudySession {
   factory StudySession.fromJson(Map<String, dynamic> json) => StudySession(
     id: json['id']?.toString() ?? '',
     startedAt:
-        DateTime.tryParse(json['startedAt']?.toString() ?? '') ?? DateTime.now(),
+        DateTime.tryParse(json['startedAt']?.toString() ?? '') ??
+        DateTime.now(),
     minutes: math.max(1, (json['minutes'] as num?)?.toInt() ?? 1),
     label: json['label']?.toString() ?? 'Focus session',
     taskId: json['taskId']?.toString(),
@@ -248,7 +253,8 @@ class DocumentAnnotation {
         orElse: () => DocumentAnnotationKind.note,
       ),
       createdAt:
-          DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+          DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
       text: json['text']?.toString() ?? '',
       note: json['note']?.toString() ?? '',
       colorValue: (json['colorValue'] as num?)?.toInt() ?? 0xFFFFD54F,
@@ -476,7 +482,9 @@ class StudyWorkspaceController extends ChangeNotifier {
 
   List<StudyTask> tasksForDay(DateTime day) {
     final target = dateOnly(day);
-    final values = tasks.where((item) => sameDay(item.dueDate, target)).toList();
+    final values = tasks
+        .where((item) => sameDay(item.dueDate, target))
+        .toList();
     values.sort(_taskSort);
     return values;
   }

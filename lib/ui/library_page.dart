@@ -571,8 +571,9 @@ class _FolderCard extends StatelessWidget {
                         Text(
                           folderCount == 0 && materialCount == 0
                               ? 'Empty • ready to organize'
-                              : '$folderCount folders • $materialCount here • '
-                                    '$totalMaterials total',
+                              : totalMaterials == materialCount
+                              ? '$folderCount subfolders • $materialCount materials'
+                              : '$folderCount subfolders • $totalMaterials materials total',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.labelSmall
@@ -636,11 +637,7 @@ class _MaterialCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      FileIcon(
-                        entry: entry,
-                        large: true,
-                        heroTag: 'entry:${entry.path}',
-                      ),
+                      FileIcon(entry: entry, large: true),
                       const Spacer(),
                       if (selectionActive)
                         Checkbox(value: selected, onChanged: (_) => onTap())
