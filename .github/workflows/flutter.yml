@@ -17,6 +17,8 @@ jobs:
       - run: flutter --version
       - run: flutter pub get
       - run: flutter analyze
+      - name: Classify narrow Home overflow
+        run: flutter test test/home_overflow_probe_test.dart
       - name: Narrow Home regression
         run: flutter test test/narrow_layout_probe_test.dart --plain-name "narrow home layout is stable"
       - name: Narrow Library regression
