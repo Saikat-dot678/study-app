@@ -27,22 +27,38 @@ class LibraryController extends ChangeNotifier {
   Future<void> _metadataWrite = Future.value();
 
   Future<void> initialize() async {
-    await _guard(() async {
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
       final state = await _bridge.getState();
       connected = state.connected;
       libraryName = state.name;
-      if (connected) {
-        await _refreshCurrentInternal();
-        await _refreshAllInternal();
-        await _loadMetadata();
-      }
       if (state.pendingShares > 0) {
         notice =
             '${state.pendingShares} shared item(s) are waiting for a library folder.';
       }
-    });
-    initialized = true;
-    notifyListeners();
+
+      initialized = true;
+      busy = false;
+      notifyListeners();
+
+      if (connected) {
+        await _refreshCurrentInternal();
+        allEntries = [...entries];
+        await _loadMetadata();
+        notifyListeners();
+
+        await _refreshAllInternal();
+        notifyListeners();
+      }
+    } catch (e) {
+      error = e.toString().replaceFirst('Bad state: ', '');
+    } finally {
+      initialized = true;
+      busy = false;
+      notifyListeners();
+    }
   }
 
   Future<void> connectLibrary() async {
