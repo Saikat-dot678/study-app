@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/library_controller.dart';
+import '../appearance/appearance_controller.dart';
+import 'sunset_settings.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key, required this.controller});
@@ -31,6 +33,10 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              if (AppearanceScope.maybeOf(context) case final appearance?) ...[
+                SunsetSettings(appearance: appearance),
+                const SizedBox(height: 24),
+              ],
               const _SectionLabel('Storage'),
               const SizedBox(height: 10),
               Card(

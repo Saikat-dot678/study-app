@@ -292,7 +292,14 @@ class _StudyShellState extends State<StudyShell> {
   }
 
   Widget _pageStack() {
-    return IndexedStack(index: pageIndex, children: _pages());
+    final pages = _pages();
+    return IndexedStack(
+      index: pageIndex,
+      children: [
+        for (var index = 0; index < pages.length; index++)
+          TickerMode(enabled: index == pageIndex, child: pages[index]),
+      ],
+    );
   }
 
   Widget _statusArea() {

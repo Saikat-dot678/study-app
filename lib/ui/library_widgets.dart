@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../appearance/appearance_controller.dart';
+import 'sunset_window.dart';
+
 import '../controllers/library_controller.dart';
 import '../models/library_entry.dart';
 import 'motion.dart';
@@ -28,19 +31,34 @@ class ConnectLibraryView extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 54,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            color: scheme.primary,
-                            borderRadius: BorderRadius.circular(16),
+                        if (AppearanceScope.maybeOf(context)
+                            case final appearance?)
+                          Center(
+                            child: SizedBox(
+                              height: 190,
+                              width: 250,
+                              child: SunsetWindow(
+                                scene: appearance.scene(
+                                  systemBrightness:
+                                      MediaQuery.platformBrightnessOf(context),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              color: scheme.primary,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              Icons.folder_copy_rounded,
+                              color: scheme.onPrimary,
+                              size: 28,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.folder_copy_rounded,
-                            color: scheme.onPrimary,
-                            size: 28,
-                          ),
-                        ),
                         const SizedBox(height: 24),
                         Text(
                           'Your library starts with a folder.',
