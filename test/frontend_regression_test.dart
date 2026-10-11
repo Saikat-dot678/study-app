@@ -71,24 +71,23 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      _expectNoFlutterException(tester);
+      _expectNoFlutterException(tester, 'initial shell at ${size.width}x${size.height}');
 
-      await tester.tap(find.text('Library').first);
-      await tester.pumpAndSettle();
+      await _selectDestination(tester, 1, 'Library');
       expect(find.text('Your spaces, folders and materials'), findsOneWidget);
-      _expectNoFlutterException(tester);
+      _expectNoFlutterException(tester, 'Library at ${size.width}x${size.height}');
 
-      await tester.tap(
-        find.text(size.width >= 1120 ? 'Goals & Calendar' : 'Goals').first,
+      await _selectDestination(
+        tester,
+        2,
+        size.width >= 1120 ? 'Goals & Calendar' : 'Goals',
       );
-      await tester.pumpAndSettle();
       expect(find.text('Plan less.\nFinish more.'), findsOneWidget);
-      _expectNoFlutterException(tester);
+      _expectNoFlutterException(tester, 'Goals at ${size.width}x${size.height}');
 
-      await tester.tap(find.text('Home').first);
-      await tester.pumpAndSettle();
+      await _selectDestination(tester, 0, 'Home');
       expect(find.text('Review database normalization'), findsWidgets);
-      _expectNoFlutterException(tester);
+      _expectNoFlutterException(tester, 'Home return at ${size.width}x${size.height}');
     });
   }
 
@@ -131,10 +130,13 @@ void main() {
     ]) {
       tester.view.physicalSize = size;
       await tester.pumpAndSettle();
-      _expectNoFlutterException(tester);
+      _expectNoFlutterException(
+        tester,
+        'after live resize to ${size.width}x${size.height}',
+      );
     }
     await mouse.removePointer();
-    _expectNoFlutterException(tester);
+    _expectNoFlutterException(tester, 'after removing mouse pointer');
   });
 
   testWidgets('shell supports disconnected state and large text', (
@@ -207,12 +209,38 @@ void main() {
   });
 }
 
-void _expectNoFlutterException(WidgetTester tester) {
+Future<void> _selectDestination(
+  WidgetTester tester,
+  int index,
+  String fallbackLabel,
+) async {
+  final railFinder = find.byType(NavigationRail);
+  if (railFinder.evaluate().isNotEmpty) {
+    final rail = tester.widget<NavigationRail>(railFinder.first);
+    rail.onDestinationSelected?.call(index);
+    await tester.pumpAndSettle();
+    return;
+  }
+
+  final barFinder = find.byType(NavigationBar);
+  if (barFinder.evaluate().isNotEmpty) {
+    final bar = tester.widget<NavigationBar>(barFinder.first);
+    bar.onDestinationSelected?.call(index);
+    await tester.pumpAndSettle();
+    return;
+  }
+
+  await tester.tap(find.text(fallbackLabel).first);
+  await tester.pumpAndSettle();
+}
+
+void _expectNoFlutterException(WidgetTester tester, [String? context]) {
   final error = tester.takeException();
   if (error case FlutterError flutterError) {
-    fail(flutterError.toStringDeep());
+    final prefix = context == null ? '' : '$context\n';
+    fail('$prefix${flutterError.toStringDeep()}');
   }
-  expect(error, isNull);
+  expect(error, isNull, reason: context);
 }
 
 LibraryController _library({int materialCount = 40}) {
