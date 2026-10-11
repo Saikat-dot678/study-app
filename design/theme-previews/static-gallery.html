@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study — choose your atmosphere</title>
+<style>
+@font-face{font-family:Manrope;src:url('../../assets/fonts/Manrope.ttf')}*{box-sizing:border-box}body{margin:0;background:#e9e9e5;color:#252728;font-family:Manrope,system-ui,sans-serif}button,a{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid #6748c0;outline-offset:4px}header{max-width:1440px;margin:auto;padding:38px 32px 22px}.eyebrow{text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:800;color:#64665f}h1{font-size:clamp(28px,3vw,44px);letter-spacing:-.05em;margin:9px 0 12px;font-weight:750}header p{color:#62655d;max-width:740px;line-height:1.65;font-size:14px;margin:0}.themes{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:26px}.theme{background:#f7f7f2;border:1px solid #d1d3ca;border-radius:12px;padding:15px;text-align:left;transition:transform .16s,border-color .16s}.theme:hover{transform:translateY(-3px)}.theme[aria-pressed=true]{border:2px solid #353a31;padding:14px;background:white}.swatches{display:flex;gap:5px;margin-bottom:11px}.swatches i{width:21px;height:21px;border-radius:50%;border:1px solid #0001}.theme strong{display:block;font-size:13px}.theme small{display:block;color:#686b62;margin-top:4px;font-size:11px}.toolbar{max-width:1440px;margin:auto;display:flex;align-items:center;gap:12px;padding:0 32px 18px}.segments{display:flex;border-radius:10px;background:#dbddd5;padding:4px;gap:3px}.segments button{border:0;background:transparent;border-radius:7px;padding:9px 14px;font-size:12px;color:#555a50}.segments button[aria-pressed=true]{background:#fff;color:#22271e;box-shadow:0 1px 4px #0001}.spacer{flex:1}.link,.zoom{font-size:12px;font-weight:700;color:#373c31}.link{text-decoration:none}.zoom{border:1px solid #bfc2b8;background:transparent;border-radius:8px;padding:9px 13px}.stage{padding:0 32px;max-width:1440px;margin:auto;min-height:300px}.stage img{display:block;width:100%;height:auto;border-radius:14px;box-shadow:0 16px 40px #20291b15}.stage.phone img{width:352px;max-width:100%;margin:auto;border-radius:26px}.stage.board img{box-shadow:none;border-radius:0}.details{max-width:1440px;margin:26px auto 44px;padding:0 32px;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:28px}.details h2{font-size:20px;letter-spacing:-.04em;margin:0 0 8px}.details h3{font-size:13px;margin:0 0 7px}.details p{font-size:12px;line-height:1.6;margin:0;color:#61665b}.note{font-size:11px!important;margin-top:8px!important}.tag{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#61665b;margin-bottom:8px}.help{max-width:1440px;margin:auto;padding:0 32px 28px;font-size:11px;color:#70756a}dialog{padding:0;border:0;border-radius:15px;max-width:96vw;max-height:94vh;width:96vw;background:#e9e9e5}dialog::backdrop{background:#0a0c11c9}.modalbar{display:flex;position:sticky;top:0;align-items:center;justify-content:space-between;background:#f9faf5;padding:12px 18px;border-bottom:1px solid #caced0}.modalbar span{font-size:12px}.modalbar button{border:0;background:#e1e5dc;padding:8px 13px;border-radius:7px;font-weight:700}.scroll{overflow:auto;max-height:calc(94vh - 65px);padding:18px}.scroll img{display:block;max-width:none;margin:auto}.scroll img.phone{width:528px}.scroll img.desktop{width:1515px}.scroll img.board{width:2100px}@media(max-width:800px){header{padding:25px 18px 18px}.themes{grid-template-columns:repeat(3,1fr)}.theme{padding:10px}.theme[aria-pressed=true]{padding:9px}.toolbar{padding:0 18px 18px;flex-wrap:wrap}.stage{padding:0 18px}.details{padding:0 18px;grid-template-columns:1fr 1fr;gap:20px}.spacer{display:none}.help{padding:0 18px 25px}}@media(prefers-reduced-motion:reduce){.theme{transition:none}.theme:hover{transform:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">Study / five design directions</div>
+  <h1>Choose your atmosphere.</h1>
+  <p>Five ways your study library could feel. Switch between desktop and phone, or open the full comparison board. Every image uses real text and can be enlarged.</p>
+  <nav class="themes" aria-label="Theme concepts"></nav>
+</header>
+<div class="toolbar">
+  <div class="segments" aria-label="Preview layout">
+    <button data-view="desktop" aria-pressed="true">Desktop</button>
+    <button data-view="phone" aria-pressed="false">Phone</button>
+    <button data-view="board" aria-pressed="false">Comparison board</button>
+  </div>
+  <div class="spacer"></div>
+  <a id="download" class="link" download>Save PNG ↗</a>
+  <button class="zoom" id="enlarge">Enlarge preview ⤢</button>
+</div>
+<main>
+  <div class="stage"><img id="preview" alt="" width="2424" height="1520"></div>
+  <section class="details" aria-live="polite"></section>
+</main>
+<p class="help">Concepts only — these themes have not been applied to the app. Motion descriptions show the planned effects; the PNG previews are static. All effects would respect Reduce Motion.</p>
+<dialog aria-label="Enlarged theme preview">
+  <div class="modalbar"><span>Full-size preview · scroll to explore</span><button id="close">Close ✕</button></div>
+  <div class="scroll"><img id="large" alt=""></div>
+</dialog>
+<script>
+const themes = [
+ {slug:'aurora-focus',name:'Aurora Focus',feel:'Luminous & composed',colors:['#101221','#b7a0ff','#7ee3cf'],description:'Midnight indigo, lavender light, and flowing orbital ribbons. A modern workspace with a calm sense of depth.',effects:[['Ambient light','Slow violet ribbons drift behind the hero.'],['Gentle depth','Cards lift slightly as your pointer moves.'],['Focus breathing','A quiet halo follows the session timer.']]},
+ {slug:'paper-studio',name:'Paper Studio',feel:'Warm & editorial',colors:['#f7f4eb','#43634e','#b7553e'],description:'Ivory paper, expressive serif headings, and muted green ink. Like opening a well-loved notebook at a beautifully arranged desk.',effects:[['Paper movement','Notes rise and settle with a soft shadow.'],['Ink details','Active tabs get a quick drawn underline.'],['Editorial rhythm','New content enters with a gentle stagger.']]},
+ {slug:'neon-night-lab',name:'Neon Night Lab',feel:'Precise & electric',colors:['#101417','#c7fc78','#85dce7'],description:'Charcoal surfaces, sharp geometry, electric lime, and ice blue. Technical and energetic, with clear, restrained controls.',effects:[['Signal response','A fine border lights up on hover and focus.'],['Live waveform','Lecture playback gets a reactive waveform.'],['Precise transitions','Fast slides and crisp, springless controls.']]},
+ {slug:'forest-desk',name:'Forest Desk',feel:'Organic & unhurried',colors:['#112720','#d2e5a7','#efc78e'],description:'Deep evergreen, warm cream, and illustrated foliage. Soft surfaces create a peaceful place for longer study sessions.',effects:[['Living canopy','A slow parallax shifts the illustrated leaves.'],['Soft focus','The timer expands like a measured breath.'],['Organic motion','Rounded surfaces ease gently into place.']]},
+ {slug:'sunset-scholar',name:'Sunset Scholar',feel:'Optimistic & tactile',colors:['#faf0e6','#9b4635','#5b5685'],description:'Sand, terracotta, plum, and a little golden light. A warm editorial direction with an architectural sunset illustration.',effects:[['Golden hour','A warm gradient shifts slowly with the day.'],['Playful surfaces','Cards respond with a tiny, tactile spring.'],['Warm arrivals','Page changes use a short, soft reveal.']]}
+];
+let selected=0, view=matchMedia('(max-width:900px)').matches?'phone':'desktop';
+const nav=document.querySelector('.themes'), stage=document.querySelector('.stage'), preview=document.querySelector('#preview'), dialog=document.querySelector('dialog');
+themes.forEach((theme,i)=>{
+ const b=document.createElement('button');b.className='theme';b.type='button';
+ b.innerHTML=`<span class="swatches">${theme.colors.map(c=>`<i style="background:${c}"></i>`).join('')}</span><strong>${i+1}. ${theme.name}</strong><small>${theme.feel}</small>`;
+ b.addEventListener('click',()=>{selected=i;render()});nav.append(b);
+});
+function render(){
+ const t=themes[selected],src=t.slug+(view==='board'?'':'-'+view)+'.png';
+ [...nav.children].forEach((b,i)=>b.setAttribute('aria-pressed',String(i===selected)));
+ document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));
+ stage.className='stage '+view;preview.src=src;preview.alt=t.name+' — '+view+' design concept';
+ preview.width=view==='phone'?704:view==='board'?2520:2424;preview.height=view==='board'?1740:1520;
+ document.querySelector('#download').href=src;
+ document.querySelector('.details').innerHTML=`<div><span class="tag">0${selected+1} / ${t.feel}</span><h2>${t.name}</h2><p>${t.description}</p></div>${t.effects.map(([title,body])=>`<div><span class="tag">Proposed motion</span><h3>${title}</h3><p>${body}</p></div>`).join('')}`;
+ document.title='Study — '+t.name;
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{view=b.dataset.view;render()}));
+document.querySelector('#enlarge').addEventListener('click',()=>{const img=document.querySelector('#large');img.src=preview.src;img.alt=preview.alt;img.className=view;dialog.showModal()});
+document.querySelector('#close').addEventListener('click',()=>dialog.close());
+dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
+render();
+</script>
+</body>
+</html>

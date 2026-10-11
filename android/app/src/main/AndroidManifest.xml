@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Optional city weather; no location or background permission is needed. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="Study App"
         android:icon="@android:drawable/ic_menu_agenda"

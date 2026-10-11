@@ -18,6 +18,7 @@ Study is an offline-first Flutter student library for Android and desktop. It ke
 - External-app fallback for legacy/uncommon formats.
 - Responsive mobile/tablet/desktop UI with a dedicated desktop sidebar, desktop command search and keyboard shortcuts.
 - Home dashboard, quick folders, continue-learning cards, library browser, global search and settings.
+- Living Sunset appearance with time-of-day colors, seasonal landscapes, optional city weather, and reduced motion.
 - No account, server, telemetry or internet requirement for the library workflow.
 - Hidden `.studyapp/library.json` marker so a copied library folder is self-describing and reconnectable.
 
@@ -114,6 +115,24 @@ Pull requests validate both surfaces:
 - Flutter analyze + tests + Android debug APK build on Linux,
 - Flutter analyze + tests + native Windows debug build on `windows-latest`.
 
+## Living Sunset appearance
+
+The Flutter app now uses the selected Sunset design: bundled Manrope and DM Serif Display typography, warm editorial surfaces, and a painted landscape on Home and the connect-folder screen. The rest of the app follows the same palette. Existing library, planner, calendar, and offline reader workflows are preserved.
+
+Open **Settings → Living Sunset** to control:
+
+- **Time:** automatically follow dawn, daylight, golden hour, blue hour, and night, or choose System / Light / Dark.
+- **Season:** follow a northern, southern, or India calendar (including monsoon), or select a season yourself.
+- **Weather:** optionally search for and choose a city. Open-Meteo requires no account or API key for its [free non-commercial service](https://open-meteo.com/en/terms). Search sends the entered city name; weather requests send the selected city's coordinates. The app does not request precise device location.
+- **Motion:** still artwork and quiet transitions, also honoring the system's reduced-motion preference. Hidden tabs and background windows stop landscape animation.
+- **Preview:** try a time and weather combination without saving it, then select **Return to my day**.
+
+Weather starts off. The app remains usable offline; without fresh weather it follows the device clock and selected calendar. When available, the selected city's time zone and sunrise/sunset set the light cycle. Weather refreshes every 30 minutes while active, failed requests back off for 10 minutes, and cached observations expire after two hours. Turning weather off clears the saved city and weather. Appearance preferences stay on the device, separate from study files.
+
+The five original HTML design concepts remain in `design/theme-previews/index.html` for comparison. Only Living Sunset is implemented as the Flutter app's dynamic appearance. See [the design lab notes](design/theme-previews/README.md) for local preview instructions.
+
 ## Privacy
 
 Study has no backend requirement. Your study files remain in the folder you choose. Reader/player preparation may use temporary local cache files when a platform API requires them; originals remain inside your portable library folder.
+
+Optional weather contacts Open-Meteo only after you search for or choose a city. It never uploads library content. Commercial distribution, advertisements, or subscriptions would require reevaluating the free weather provider's terms.
