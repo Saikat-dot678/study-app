@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../controllers/library_controller.dart';
+import '../appearance/appearance_controller.dart';
 import '../models/library_entry.dart';
 import '../models/study_metadata.dart';
 import '../viewers/viewer_page.dart';
@@ -8,6 +9,7 @@ import '../workspace/study_workspace_controller.dart';
 import 'actions.dart';
 import 'library_widgets.dart';
 import 'premium_components.dart';
+import 'sunset_window.dart';
 
 /// Home is a starting point, not a report.
 ///
@@ -38,6 +40,7 @@ class StudyDashboard extends StatelessWidget {
     final tasks = workspace.tasksForDay(today);
     final recent = controller.recentFiles.take(8).toList();
     final spaces = controller.rootSpaces.take(12).toList();
+    final appearance = AppearanceScope.maybeOf(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -58,9 +61,36 @@ class StudyDashboard extends StatelessWidget {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1240),
-                      child: _HomeHeader(
-                        materialCount: controller.materialCountUnder(''),
-                      ),
+                      child: appearance == null
+                          ? _HomeHeader(
+                              materialCount: controller.materialCountUnder(''),
+                            )
+                          : SunsetWelcome(
+                              scene: appearance.scene(
+                                systemBrightness:
+                                    MediaQuery.platformBrightnessOf(context),
+                              ),
+                              weatherLabel: appearance.previewing
+                                  ? 'Atmosphere preview'
+                                  : appearance.weatherEnabled
+                                  ? appearance.weatherStatus
+                                  : 'Clock & calendar · offline',
+                              continueLabel: recent.isEmpty
+                                  ? 'Explore your library'
+                                  : 'Continue studying',
+                              onContinue: () {
+                                if (recent.isEmpty) {
+                                  openLibrary(null);
+                                } else {
+                                  openStudyViewer(
+                                    context,
+                                    controller,
+                                    recent.first,
+                                  );
+                                }
+                              },
+                              onLibrary: () => openLibrary(null),
+                            ),
                     ),
                   ),
                 ),

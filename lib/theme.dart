@@ -1,11 +1,53 @@
 import 'package:flutter/material.dart';
 
+import 'appearance/sunset_scene.dart';
+
 /// Study's "quiet editorial" visual system.
 ///
 /// Neutral paper/ink surfaces keep long reading and planning sessions calm;
 /// indigo carries primary actions and coral is reserved for urgency/progress.
 class AppTheme {
   static const _indigo = Color(0xFF4D55CC);
+
+  static ThemeData sunset(SunsetScene scene) {
+    final p = scene.palette;
+    final base = ColorScheme.fromSeed(
+      seedColor: p.accent,
+      brightness: scene.dark ? Brightness.dark : Brightness.light,
+    );
+    return _build(
+      base.copyWith(
+        primary: p.accent,
+        onPrimary: p.onAccent,
+        primaryContainer: p.elevated,
+        onPrimaryContainer: p.ink,
+        secondary: p.secondary,
+        secondaryContainer: p.elevated,
+        onSecondaryContainer: p.ink,
+        tertiary: p.accent,
+        surface: p.background,
+        surfaceContainerLowest: p.surface,
+        surfaceContainerLow: p.surface,
+        surfaceContainer: p.sidebar,
+        surfaceContainerHigh: p.elevated,
+        surfaceContainerHighest: p.elevated,
+        onSurface: p.ink,
+        onSurfaceVariant: p.muted,
+        outlineVariant: Color.lerp(p.background, p.ink, .18),
+        outline: Color.lerp(p.background, p.ink, .5),
+      ),
+      dark: scene.dark,
+    ).copyWith(
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: p.accent,
+          foregroundColor: p.onAccent,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          shape: const StadiumBorder(),
+        ),
+      ),
+    );
+  }
 
   static ThemeData get light {
     final base = ColorScheme.fromSeed(
@@ -70,6 +112,7 @@ class AppTheme {
   static ThemeData _build(ColorScheme scheme, {required bool dark}) {
     final base = ThemeData(
       useMaterial3: true,
+      fontFamily: 'Manrope',
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
       visualDensity: VisualDensity.standard,
